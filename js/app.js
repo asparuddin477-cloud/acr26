@@ -7,10 +7,10 @@
 // STATE APLIKASI
 // =====================================================================
 const State = {
-    role: 'superadmin',
+    role: 'guest',
     currentMasterList: [],
     currentHistoryList: [],
-    activePage: 'dashboard',
+    activePage: 'info',
     unsubscribePeserta: null,
     unsubscribeSettings: null,
     settings: {
@@ -44,6 +44,16 @@ let paymentInterval = null;
 // =====================================================================
 window.nav = function(pageId) {
     if (paymentInterval) { clearInterval(paymentInterval); paymentInterval = null; }
+    
+    // Keamanan Akses: Lindungi halaman admin jika belum login
+    const adminPages = ['dashboard', 'master', 'logistik', 'checkin', 'pengaturan'];
+    if (adminPages.includes(pageId) && State.role === 'guest') {
+        pageId = 'akun';
+    }
+    if (State.role === 'panitia' && (pageId === 'dashboard' || pageId === 'master' || pageId === 'pengaturan')) {
+        pageId = 'checkin';
+    }
+
     State.activePage = pageId;
 
     document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
@@ -329,8 +339,12 @@ window.loginAdmin = function() {
     
     if(val === 'super@dmin1') {
         State.role = 'superadmin';
-        document.getElementById('adminMenus').classList.remove('hidden');
-        document.getElementById('adminMenus').classList.add('flex');
+        sessionStorage.setItem('acr_role', 'superadmin');
+        const adminMenus = document.getElementById('adminMenus');
+        if (adminMenus) {
+            adminMenus.classList.remove('hidden');
+            adminMenus.classList.add('flex');
+        }
         document.querySelectorAll('[data-req="superadmin"]').forEach(el => el.classList.remove('hidden'));
         
         document.getElementById('loginForm').classList.add('hidden');
@@ -342,8 +356,12 @@ window.loginAdmin = function() {
         window.nav('dashboard');
     } else if(val === 'p@niti4') {
         State.role = 'panitia';
-        document.getElementById('adminMenus').classList.remove('hidden');
-        document.getElementById('adminMenus').classList.add('flex');
+        sessionStorage.setItem('acr_role', 'panitia');
+        const adminMenus = document.getElementById('adminMenus');
+        if (adminMenus) {
+            adminMenus.classList.remove('hidden');
+            adminMenus.classList.add('flex');
+        }
         document.querySelectorAll('[data-req="superadmin"]').forEach(el => el.classList.add('hidden'));
         
         document.getElementById('loginForm').classList.add('hidden');
@@ -360,8 +378,12 @@ window.loginAdmin = function() {
 
 window.logoutAdmin = function() {
     State.role = 'guest';
-    document.getElementById('adminMenus').classList.add('hidden');
-    document.getElementById('adminMenus').classList.remove('flex');
+    sessionStorage.removeItem('acr_role');
+    const adminMenus = document.getElementById('adminMenus');
+    if (adminMenus) {
+        adminMenus.classList.add('hidden');
+        adminMenus.classList.remove('flex');
+    }
     document.getElementById('loginForm').classList.remove('hidden');
     document.getElementById('logoutForm').classList.add('hidden');
     document.getElementById('akunTitle').textContent = "Welcome ACR 2026";
@@ -1657,22 +1679,52 @@ function loadSeedDataIfEmpty() {
 }
 
 function restoreAdminRole() {
-    State.role = 'superadmin';
+    const savedRole = sessionStorage.getItem('acr_role');
     const adminMenus = document.getElementById('adminMenus');
-    if (adminMenus) {
-        adminMenus.classList.remove('hidden');
-        adminMenus.classList.add('flex');
-    }
     const loginForm = document.getElementById('loginForm');
     const logoutForm = document.getElementById('logoutForm');
-    if (loginForm && logoutForm) {
-        loginForm.classList.add('hidden');
-        logoutForm.classList.remove('hidden');
-    }
     const akunTitle = document.getElementById('akunTitle');
     const akunDesc = document.getElementById('akunDesc');
-    if (akunTitle) akunTitle.textContent = "Super Admin Aktif";
-    if (akunDesc) akunDesc.textContent = "Akses Penuh: Verifikasi, Master Data, & Pengaturan.";
+
+    if (savedRole === 'superadmin') {
+        State.role = 'superadmin';
+        if (adminMenus) {
+            adminMenus.classList.remove('hidden');
+            adminMenus.classList.add('flex');
+        }
+        document.querySelectorAll('[data-req="superadmin"]').forEach(el => el.classList.remove('hidden'));
+        if (loginForm && logoutForm) {
+            loginForm.classList.add('hidden');
+            logoutForm.classList.remove('hidden');
+        }
+        if (akunTitle) akunTitle.textContent = "Super Admin Aktif";
+        if (akunDesc) akunDesc.textContent = "Akses Penuh: Verifikasi, Master Data, & Pengaturan.";
+    } else if (savedRole === 'panitia') {
+        State.role = 'panitia';
+        if (adminMenus) {
+            adminMenus.classList.remove('hidden');
+            adminMenus.classList.add('flex');
+        }
+        document.querySelectorAll('[data-req="superadmin"]').forEach(el => el.classList.add('hidden'));
+        if (loginForm && logoutForm) {
+            loginForm.classList.add('hidden');
+            logoutForm.classList.remove('hidden');
+        }
+        if (akunTitle) akunTitle.textContent = "Panitia Aktif";
+        if (akunDesc) akunDesc.textContent = "Akses Terbatas: Hanya Check-In & Logistik.";
+    } else {
+        State.role = 'guest';
+        if (adminMenus) {
+            adminMenus.classList.add('hidden');
+            adminMenus.classList.remove('flex');
+        }
+        if (loginForm && logoutForm) {
+            loginForm.classList.remove('hidden');
+            logoutForm.classList.add('hidden');
+        }
+        if (akunTitle) akunTitle.textContent = "Welcome ACR 2026";
+        if (akunDesc) akunDesc.textContent = "Silahkan Anda Login";
+    }
 }
 
 window.syncLegacyToFirestore = async function() {
@@ -1736,8 +1788,9 @@ async function initialLoad() {
         loadLocalFallbackData();
     }
 
-    // Buka Dashboard Admin
-    window.nav('dashboard');
+    // Buka Halaman Publik (Info) secara default saat website diakses
+    const defaultPage = State.role === 'superadmin' ? 'dashboard' : (State.role === 'panitia' ? 'checkin' : 'info');
+    window.nav(defaultPage);
     window.showLoading(false);
 }
 

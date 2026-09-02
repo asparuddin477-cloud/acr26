@@ -40,13 +40,13 @@
                     <a href="#" onclick="nav('bayar')" class="nav-link px-2 sm:px-3 py-2 rounded-md font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50">Bayar</a>
                     <a href="#" onclick="nav('status')" class="nav-link px-2 sm:px-3 py-2 rounded-md font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50">Status</a>
                     
-                    <!-- Admin Menus (Selalu Tampil) -->
-                    <div id="adminMenus" class="flex items-center space-x-1 border-l-2 border-slate-200 pl-2 sm:pl-4 ml-2 sm:ml-4">
-                        <a href="#" onclick="nav('dashboard')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Admin</a>
-                        <a href="#" onclick="nav('master')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Master</a>
-                        <a href="#" onclick="nav('logistik')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Logistik</a>
-                        <a href="#" onclick="nav('checkin')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Check-In</a>
-                        <a href="#" onclick="nav('pengaturan')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Pengaturan</a>
+                    <!-- Admin Menus (Disembunyikan untuk Publik, Muncul Setelah Login) -->
+                    <div id="adminMenus" class="hidden items-center space-x-1 border-l-2 border-slate-200 pl-2 sm:pl-4 ml-2 sm:ml-4">
+                        <a href="#" data-req="superadmin" onclick="nav('dashboard')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Admin</a>
+                        <a href="#" data-req="superadmin" onclick="nav('master')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Master</a>
+                        <a href="#" data-req="panitia" onclick="nav('logistik')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Logistik</a>
+                        <a href="#" data-req="panitia" onclick="nav('checkin')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Check-In</a>
+                        <a href="#" data-req="superadmin" onclick="nav('pengaturan')" class="nav-link px-2 py-2 rounded-md font-bold text-emerald-600 hover:bg-emerald-50">Pengaturan</a>
                     </div>
 
                     <!-- Tombol Koneksi Firebase (Disembunyikan) -->
