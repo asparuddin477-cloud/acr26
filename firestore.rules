@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Aturan untuk Sistem Manajemen Alpha Chase Run (ACR 2026)
+    
+    // Koleksi data peserta
+    match /peserta/{pesertaId} {
+      // Mengizinkan pendaftaran publik, verifikasi admin, check-in, dan logistik
+      allow read, write: if true;
+    }
+    
+    // Koleksi konfigurasi event
+    match /settings/{settingId} {
+      // Mengizinkan publik membaca info lomba & super admin menyimpan pengaturan
+      allow read, write: if true;
+    }
+  }
+}
