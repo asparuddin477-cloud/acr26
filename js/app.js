@@ -1390,6 +1390,75 @@ window.saveEditPeserta = async function(event) {
     }
 };
 
+window.exportToCSV = function() {
+    const list = State.currentMasterList;
+    if (!list || list.length === 0) {
+        window.customAlert("Belum ada data peserta untuk diunduh.", "warning", "Data Kosong");
+        return;
+    }
+
+    const cols = [
+        'kode', 'nama', 'ktp', 'gender', 'kategori', 'bibName', 'wa', 'jersey',
+        'komunitas', 'alamat', 'provinsi', 'kota', 'darurat', 'komorbid',
+        'tagihan', 'diskon', 'status', 'bibNumber', 'checkedIn',
+        'kodeLogistik', 'logistikDiambil', 'bukti', 'createdAt'
+    ];
+
+    const rows = [];
+    rows.push(cols.join(','));
+
+    list.forEach(p => {
+        const row = cols.map(c => {
+            let val = p[c] !== undefined && p[c] !== null ? p[c] : '';
+            
+            if (c === 'ktp') {
+                // Cegah Excel mengubah NIK jadi notasi ilmiah
+                val = val ? `"=""${val}"""` : '""';
+            } else if (c === 'wa' || c === 'darurat') {
+                let valStr = String(val).trim();
+                if (valStr && !valStr.startsWith('0') && !valStr.startsWith('+')) {
+                    valStr = '0' + valStr;
+                }
+                val = valStr ? `"=""${valStr}"""` : '""';
+            } else if (c === 'bukti') {
+                val = val ? '"[Ada Bukti]"' : '"[Tidak Ada Bukti]"';
+            } else if (c === 'checkedIn') {
+                val = (val === true || val === 'TRUE' || val === 'true') ? '"TRUE"' : '"FALSE"';
+            } else if (c === 'createdAt') {
+                if (typeof val === 'number' && val > 1000000000) {
+                    try {
+                        const ts = val > 100000000000 ? val : val * 1000;
+                        const d = new Date(ts);
+                        val = `"${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}"`;
+                    } catch(e) {
+                        val = `"${val}"`;
+                    }
+                } else {
+                    val = `"${val}"`;
+                }
+            } else {
+                let s = String(val).replace(/\r?\n|\r/g, ' ').replace(/"/g, '""').trim();
+                val = `"${s}"`;
+            }
+            return val;
+        });
+        rows.push(row.join(','));
+    });
+
+    const csvContent = '\uFEFF' + rows.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+    link.setAttribute('href', url);
+    link.setAttribute('download', `database_peserta_acr2026_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
+
 window.exportToPDF = async function() {
     window.showLoading(true, "Membuat PDF...");
     try {
