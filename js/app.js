@@ -765,7 +765,7 @@ document.getElementById('formDaftar').addEventListener('submit', async function(
     const targetWord = words.find(w => /^[A-Za-z]+$/.test(w) && w.toUpperCase() !== 'K' && w.toUpperCase() !== 'KM') || words.find(w => /^[A-Za-z]+$/.test(w)) || "X";
     const catPrefix = targetWord.charAt(0).toUpperCase();
     
-    const newBib = "ACR" + catPrefix + "26-" + String(State.currentMasterList.length + 1).padStart(3, '0');
+    const newBib = catPrefix + "-" + String(State.currentMasterList.length + 1).padStart(3, '0');
     
     let hargaDasar = 0;
     const match = kategoriText.match(/\(Rp\s*([\d.]+)\)/i);
