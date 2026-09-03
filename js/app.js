@@ -1622,7 +1622,7 @@ document.getElementById('formCheckin').addEventListener('submit', async function
     if (isAlreadyChecked && p.kodeLogistik) {
         // Jika sudah pernah check-in, gunakan kode logistik yang sama (tidak boleh buat kode baru/dobel!)
         document.getElementById('ciResNama').textContent = p.nama;
-        document.getElementById('ciResKat').textContent = p.kategori;
+        document.getElementById('ciResKat').textContent = (p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim();
         document.getElementById('ciResBib').textContent = p.bibNumber;
         document.getElementById('logistikCodeDisplay').textContent = p.kodeLogistik;
         document.getElementById('qrCodeImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${p.kodeLogistik}`;
@@ -1653,7 +1653,7 @@ document.getElementById('formCheckin').addEventListener('submit', async function
     const logCode = "LOG-" + String(nextNum).padStart(3, '0');
 
     document.getElementById('ciResNama').textContent = p.nama;
-    document.getElementById('ciResKat').textContent = p.kategori;
+    document.getElementById('ciResKat').textContent = (p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim();
     document.getElementById('ciResBib').textContent = p.bibNumber;
     document.getElementById('logistikCodeDisplay').textContent = logCode;
     document.getElementById('qrCodeImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${logCode}`;
@@ -2107,7 +2107,7 @@ window.handleBibSearchInput = function(query) {
             <div>
                 <div class="font-bold text-slate-800 text-sm group-hover:text-indigo-600 uppercase">${p.nama}</div>
                 <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-                    <span>${p.kategori || '-'}</span>
+                    <span>${(p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim()}</span>
                     <span class="text-slate-300">•</span>
                     <span class="font-mono text-blue-600 font-bold">BIB: ${p.bibNumber || 'Belum ada BIB'}</span>
                     <span class="text-slate-300">•</span>
@@ -2165,7 +2165,9 @@ window.showBibScreen = function(kode) {
     const resBox = document.getElementById('bibSearchResults');
     if (resBox) resBox.classList.add('hidden');
 
-    let kategoriDisplay = p.kategori || '5K UMUM';
+    // Bersihkan nominal rupiah, contoh "5K Pelajar (Rp 175.000)" -> "5K PELAJAR"
+    let rawKat = (p.kategori || '5K Pelajar').replace(/\s*\([^)]*\)/g, '').trim();
+    let kategoriDisplay = rawKat.toUpperCase();
     let bibDisplay = p.bibNumber || p.kode || '-';
 
     document.getElementById('dispBibKategori').textContent = kategoriDisplay;
