@@ -14,6 +14,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/custom.css">
+    <link rel="icon" type="image/png" href="images/logo.png">
 </head>
 <body class="bg-pattern min-h-screen text-slate-800 font-sans antialiased pb-20 sm:pb-10">
 
@@ -21,10 +22,10 @@
     <nav class="bg-white shadow-md sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4">
             <div class="flex justify-between items-center h-14 sm:h-16 overflow-x-auto no-scrollbar">
-                <div class="flex items-center space-x-2 flex-shrink-0 mr-4 cursor-pointer" onclick="nav('info')">
-                    <svg class="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 hidden sm:block" fill="currentColor" viewBox="0 0 384 512"><path d="M272 96a48 48 0 1 0 0-96 48 48 0 1 0 0 96zM113.7 264.4c-8.7-10.9-24.8-12.7-35.7-4s-12.7 24.8-4 35.7L136 374.3V480c0 17.7 14.3 32 32 32s32-14.3 32-32V384c0-26.4-16.2-50.1-40.8-59.8L113.7 264.4zM245.8 174.9c-15.5-13.4-38.3-15.5-55.9-5.1L126.5 207c-15.2 8.9-20.3 28.5-11.4 43.7s28.5 20.3 43.7 11.4l50.2-29.4 33 46.1c11.3 15.8 32.1 20.7 49 11.6l81.6-43.5c15.5-8.3 21.4-27.5 13.1-43.1s-27.5-21.4-43.1-13.1L277 220 245.8 174.9z"/></svg>
+                <div class="flex items-center space-x-2.5 flex-shrink-0 mr-4 cursor-pointer" onclick="nav('info')">
+                    <img src="images/logo.png" alt="Logo Alpha Chase Run" class="w-8 h-8 sm:w-10 sm:h-10 object-contain flex-shrink-0 drop-shadow-sm">
                     <div class="flex flex-col">
-                        <span class="font-bold text-base sm:text-xl tracking-tight leading-tight">Alpha Chase Run</span>
+                        <span class="font-extrabold text-base sm:text-xl tracking-tight leading-tight text-slate-900">Alpha Chase Run</span>
                         <span class="text-[10px] text-emerald-600 font-medium flex items-center mt-0.5">
                             <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1.5"></span>
                             <span id="onlineCounter">...</span>&nbsp;Sedang Online
@@ -118,8 +119,10 @@
             <div id="heroSection" class="bg-blue-600 p-6 sm:p-12 text-white shadow-xl relative mb-6 overflow-hidden rounded-none sm:rounded-3xl">
                 <div id="heroBgOverlay" class="absolute inset-y-0 right-0 w-full md:w-2/3 z-0 bg-right bg-no-repeat bg-[length:auto_100%] sm:bg-[length:auto_120%] mix-blend-overlay" style="display: none;"></div>
                 <div class="relative z-10 text-center sm:text-left">
-                    <span class="inline-block py-1 px-3 bg-blue-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3 border border-blue-400 rounded">Pendaftaran Resmi</span>
-                    <h1 id="infoTitle" class="text-2xl sm:text-5xl font-extrabold mb-3 leading-tight whitespace-pre-line">Alpha Chase Run</h1>
+                    <div class="flex items-center justify-center sm:justify-start gap-3 sm:gap-4 mb-3">
+                        <img src="images/logo.png" alt="Logo Alpha Chase Run" class="w-14 h-14 sm:w-20 sm:h-20 object-contain drop-shadow-2xl flex-shrink-0">
+                        <h1 id="infoTitle" class="text-2xl sm:text-5xl font-extrabold leading-tight whitespace-pre-line text-white">Alpha Chase Run</h1>
+                    </div>
                     <p id="infoDesc" class="text-blue-100 text-sm sm:text-lg mb-4 max-w-xl mx-auto sm:mx-0 whitespace-pre-line">Berlari Untuk Negeri!</p>
                     
                     <div class="mb-6 bg-blue-700 bg-opacity-40 inline-block p-3 rounded-xl border border-blue-500 text-left">
@@ -425,9 +428,7 @@
                     <!-- Top Bar: Event Brand & BIB CHECK Title -->
                     <div class="relative z-10 flex justify-between items-start border-b border-white/20 pb-4 mb-6">
                         <div class="flex items-center space-x-3">
-                            <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/30 flex items-center justify-center p-2 shadow-lg">
-                                <svg class="w-8 h-8 text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="5" r="2.5"/><path d="M7 21l3-7 3 2 2 5"/><path d="M10 14l1-5 4 2 3-3"/></svg>
-                            </div>
+                            <img src="images/logo.png" alt="Logo Alpha Chase Run" class="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-xl flex-shrink-0">
                             <div>
                                 <h3 class="font-black text-xl sm:text-2xl tracking-wider uppercase text-white drop-shadow">ALPHA CHASE RUN</h3>
                                 <p class="text-[11px] sm:text-xs text-cyan-200 font-medium tracking-widest uppercase">2026 • OFFICIAL RACE PACK COLLECTION</p>
