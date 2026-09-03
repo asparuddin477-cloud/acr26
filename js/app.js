@@ -1177,8 +1177,10 @@ window.renderMasterTable = function() {
     
     const rows = [];
     filteredList.forEach(p => {
-        let btnHTML = '<div class="flex flex-wrap gap-1 justify-end max-w-[160px] ml-auto">';
+        let btnHTML = '<div class="flex flex-wrap gap-1 justify-end max-w-[170px] ml-auto">';
         
+        btnHTML += `<button onclick="openEditPesertaModal('${p.kode}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm active:scale-95 transition">Edit</button>`;
+
         if (p.bukti && p.bukti !== '') {
             btnHTML += `<button onclick="openVerifyModal('${p.kode}', 'view')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm hover:bg-slate-700 active:scale-95">Bukti</button>`;
         }
@@ -1206,7 +1208,7 @@ window.renderMasterTable = function() {
                 <td class="py-3 px-3 align-top"><span class="font-bold text-slate-700 text-xs uppercase">${p.bibName || '-'}</span></td>
                 <td class="py-3 px-3 align-top">
                     <div class="font-bold text-slate-800 text-sm truncate max-w-[120px] sm:max-w-[200px]">${p.nama}</div>
-                    <div class="text-[10px] text-slate-500">${p.kategori}</div>
+                    <div class="text-[10px] text-slate-500">${p.kategori} <span class="text-indigo-600 font-bold ml-1">• ${p.jersey || '-'}</span></div>
                 </td>
                 <td class="py-3 px-3 align-top">
                     <span class="text-[10px] border px-2 py-1 rounded inline-block ${statusClass} leading-none text-center">${p.status}</span>
@@ -1282,6 +1284,109 @@ window.deletePeserta = async function(kode) {
         await deletePesertaRecord(kode); 
     } catch(e) {
         await window.customAlert("Gagal menghapus: " + e.message, "error");
+    }
+};
+
+window.openEditPesertaModal = function(kode) {
+    const p = State.currentMasterList.find(x => x.kode === kode);
+    if (!p) return;
+
+    document.getElementById('editKode').value = p.kode;
+    document.getElementById('editModalSubtitle').textContent = `Kode: ${p.kode} • BIB: ${p.bibNumber || '-'}`;
+    document.getElementById('editNama').value = p.nama || '';
+    
+    // Set Ukuran Jersey
+    const jerseySelect = document.getElementById('editJersey');
+    if (jerseySelect) {
+        jerseySelect.value = p.jersey ? p.jersey.trim() : '';
+    }
+
+    // Set Kategori Lomba
+    const katSelect = document.getElementById('editKategori');
+    if (katSelect) {
+        katSelect.innerHTML = '';
+        const listKat = (State.settings && State.settings.kategori) 
+            ? State.settings.kategori.split('\n').map(k => k.trim()).filter(Boolean) 
+            : ['5K Umum', '10K Umum', '10K Master'];
+        
+        // Pastikan kategori peserta saat ini ada di opsi
+        if (p.kategori && !listKat.includes(p.kategori.trim())) {
+            listKat.push(p.kategori.trim());
+        }
+
+        listKat.forEach(k => {
+            const opt = document.createElement('option');
+            opt.value = k;
+            opt.textContent = k;
+            if (k === (p.kategori ? p.kategori.trim() : '')) opt.selected = true;
+            katSelect.appendChild(opt);
+        });
+    }
+
+    document.getElementById('editStatus').value = p.status || 'Menunggu Pembayaran';
+    document.getElementById('editBibName').value = p.bibName || '';
+    document.getElementById('editBibNumber').value = p.bibNumber || '';
+    document.getElementById('editWa').value = p.wa || p.telepon || '';
+
+    document.getElementById('editPesertaModal').classList.remove('hidden');
+};
+
+window.closeEditPesertaModal = function() {
+    const modal = document.getElementById('editPesertaModal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.saveEditPeserta = async function(event) {
+    event.preventDefault();
+    const kode = document.getElementById('editKode').value;
+    if (!kode) return;
+
+    const nama = document.getElementById('editNama').value.trim().toUpperCase();
+    const jersey = document.getElementById('editJersey').value;
+    const kategori = document.getElementById('editKategori').value;
+    const status = document.getElementById('editStatus').value;
+    const bibName = document.getElementById('editBibName').value.trim().toUpperCase();
+    const bibNumber = document.getElementById('editBibNumber').value.trim();
+    const wa = document.getElementById('editWa').value.trim();
+
+    const saveBtn = document.getElementById('btnSaveEditPeserta');
+    const originalText = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>Menyimpan...</span>';
+    }
+
+    try {
+        const updateData = {
+            nama,
+            jersey,
+            kategori,
+            status,
+            bibName,
+            bibNumber,
+            wa
+        };
+
+        // Simpan langsung ke Firestore & Local
+        await updatePeserta(kode, updateData);
+
+        // Update objek di memory
+        const pIndex = State.currentMasterList.findIndex(x => x.kode === kode);
+        if (pIndex !== -1) {
+            State.currentMasterList[pIndex] = Object.assign({}, State.currentMasterList[pIndex], updateData);
+        }
+
+        window.closeEditPesertaModal();
+        refreshActivePageUI();
+
+        await window.customAlert(`Data peserta <strong>${nama}</strong> berhasil diperbarui!<br><br>Ukuran Jersey: <strong>${jersey}</strong>`, "success", "Berhasil Disimpan");
+    } catch(err) {
+        await window.customAlert("Gagal menyimpan perubahan:<br><br>" + err.message, "error", "Gagal");
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
     }
 };
 
