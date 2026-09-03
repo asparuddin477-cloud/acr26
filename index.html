@@ -414,9 +414,9 @@
                             </div>
                             <input type="text" id="searchMasterInput" onkeyup="renderMasterTable()" placeholder="Cari Nama/BIB/Kode..." class="w-full pl-9 px-3 py-2 border rounded-lg text-xs outline-none focus:border-blue-500 bg-slate-50">
                         </div>
-                        <button onclick="exportToCSV()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-bold active:scale-95 transition flex items-center flex-shrink-0 shadow-sm">
+                        <button onclick="exportToExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-bold active:scale-95 transition flex items-center flex-shrink-0 shadow-sm">
                             <svg class="w-4 h-4 mr-1 sm:mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            <span>Download Excel / CSV</span>
+                            <span>Download Excel (.xlsx)</span>
                         </button>
                         <button onclick="exportToPDF()" class="text-xs bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-bold active:scale-95 transition flex items-center flex-shrink-0"><svg class="w-4 h-4 mr-1 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> PDF</button>
                     </div>
@@ -911,6 +911,7 @@
     <!-- SCRIPT FIREBASE & APLIKASI -->
     <script src="js/firebase-config.js"></script>
     <script src="js/seed-data.js"></script>
+    <script src="js/xlsx.full.min.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

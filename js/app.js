@@ -1390,6 +1390,90 @@ window.saveEditPeserta = async function(event) {
     }
 };
 
+window.exportToExcel = function() {
+    const list = State.currentMasterList;
+    if (!list || list.length === 0) {
+        window.customAlert("Belum ada data peserta untuk diunduh.", "warning", "Data Kosong");
+        return;
+    }
+
+    const cols = [
+        'kode', 'nama', 'ktp', 'gender', 'kategori', 'bibName', 'wa', 'jersey',
+        'komunitas', 'alamat', 'provinsi', 'kota', 'darurat', 'komorbid',
+        'tagihan', 'diskon', 'status', 'bibNumber', 'checkedIn',
+        'kodeLogistik', 'logistikDiambil', 'bukti', 'createdAt'
+    ];
+
+    if (window.XLSX) {
+        // Buat file Excel (.xlsx) ASLI dengan SheetJS
+        const dataForSheet = list.map(p => {
+            const obj = {};
+            cols.forEach(c => {
+                let val = p[c] !== undefined && p[c] !== null ? p[c] : '';
+                if (c === 'ktp') {
+                    val = String(val).trim();
+                } else if (c === 'wa' || c === 'darurat') {
+                    let s = String(val).trim();
+                    if (s && !s.startsWith('0') && !s.startsWith('+')) s = '0' + s;
+                    val = s;
+                } else if (c === 'bukti') {
+                    val = val ? '[Ada Bukti Transfer]' : '[Tidak Ada Bukti]';
+                } else if (c === 'checkedIn') {
+                    val = (val === true || val === 'TRUE' || val === 'true') ? 'TRUE' : 'FALSE';
+                } else if (c === 'createdAt') {
+                    if (typeof val === 'number' && val > 1000000000) {
+                        try {
+                            const ts = val > 100000000000 ? val : val * 1000;
+                            const d = new Date(ts);
+                            val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+                        } catch(e) {}
+                    }
+                } else if (typeof val === 'string') {
+                    val = val.replace(/\r?\n|\r/g, ' ').trim();
+                }
+                obj[c] = val;
+            });
+            return obj;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(dataForSheet, { header: cols });
+
+        // Set Lebar Kolom Otomatis
+        const colWidths = cols.map(col => {
+            let maxL = col.length;
+            dataForSheet.slice(0, 100).forEach(row => {
+                const valL = String(row[col] || '').length;
+                if (valL > maxL) maxL = valL;
+            });
+            return { wch: Math.min(Math.max(maxL + 3, 10), 40) };
+        });
+        ws['!cols'] = colWidths;
+
+        // Pastikan kolom NIK & WA berupa teks agar tidak terpotong ilmiah
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        const textCols = [cols.indexOf('ktp'), cols.indexOf('wa'), cols.indexOf('darurat')];
+        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+            textCols.forEach(C => {
+                const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+                if (ws[cellRef]) {
+                    ws[cellRef].t = 's';
+                    ws[cellRef].z = '@';
+                }
+            });
+        }
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Peserta ACR 2026");
+
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+        XLSX.writeFile(wb, `database_peserta_acr2026_${dateStr}.xlsx`);
+    } else {
+        // Fallback jika library belum termuat
+        window.exportToCSV();
+    }
+};
+
 window.exportToCSV = function() {
     const list = State.currentMasterList;
     if (!list || list.length === 0) {
