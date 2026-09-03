@@ -1601,36 +1601,76 @@ window.exportToPDF = async function() {
 // =====================================================================
 document.getElementById('formCheckin').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const kode = document.getElementById('checkinKode').value.toUpperCase().trim();
+    const inputVal = document.getElementById('checkinKode').value.toUpperCase().trim();
     
-    let p = State.currentMasterList.find(x => x.kode === kode);
+    // Cari berdasarkan Kode Pendaftaran ATAU Nomor BIB
+    let p = State.currentMasterList.find(x => x.kode === inputVal || (x.bibNumber && x.bibNumber.toUpperCase() === inputVal));
 
-    if (p) {
-        if(p.status !== 'Verified') {
-            await window.customAlert("Peserta ini belum diverifikasi pembayarannya.", "warning");
-        } else if(p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true') {
-            await window.customAlert(`Peserta atas nama:<br><strong class="text-blue-600">${p.nama}</strong><br><br><strong>SUDAH MELAKUKAN CHECK-IN</strong> sebelumnya.`, "warning", "Peringatan Check-in!");
-        } else {
-            const checkedCount = State.currentMasterList.filter(x => x.checkedIn === true || x.checkedIn === 'TRUE' || x.checkedIn === 'true').length;
-            const logCode = "LOG-" + String(checkedCount + 1).padStart(3, '0');
-
-            document.getElementById('ciResNama').textContent = p.nama;
-            document.getElementById('ciResKat').textContent = p.kategori;
-            document.getElementById('ciResBib').textContent = p.bibNumber;
-            document.getElementById('logistikCodeDisplay').textContent = logCode;
-            document.getElementById('qrCodeImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${logCode}`;
-            document.getElementById('checkinSuccessModal').classList.remove('hidden');
-            this.reset();
-
-            await updatePeserta(kode, { 
-                checkedIn: true, 
-                kodeLogistik: logCode, 
-                logistikDiambil: "" 
-            });
-        }
-    } else { 
-        await window.customAlert("Kode Daftar tidak ditemukan di sistem!", "error"); 
+    if (!p) {
+        await window.customAlert("Kode Pendaftaran atau Nomor BIB tidak ditemukan di sistem!", "error");
+        return;
     }
+
+    if (p.status !== 'Verified') {
+        await window.customAlert(`Peserta <strong>${p.nama}</strong> (${p.kode}) belum diverifikasi pembayarannya.<br>Harap verifikasi terlebih dahulu di menu Master.`, "warning", "Belum Diverifikasi");
+        return;
+    }
+
+    const isAlreadyChecked = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true' || (p.kodeLogistik && p.kodeLogistik.trim() !== '');
+
+    if (isAlreadyChecked && p.kodeLogistik) {
+        // Jika sudah pernah check-in, gunakan kode logistik yang sama (tidak boleh buat kode baru/dobel!)
+        document.getElementById('ciResNama').textContent = p.nama;
+        document.getElementById('ciResKat').textContent = p.kategori;
+        document.getElementById('ciResBib').textContent = p.bibNumber;
+        document.getElementById('logistikCodeDisplay').textContent = p.kodeLogistik;
+        document.getElementById('qrCodeImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${p.kodeLogistik}`;
+        document.getElementById('checkinSuccessModal').classList.remove('hidden');
+        this.reset();
+        await window.customAlert(`Peserta <strong>${p.nama}</strong> sudah check-in sebelumnya dengan kode: <strong class="text-blue-600 text-lg">${p.kodeLogistik}</strong>.<br><br>Kode yang sama telah dimuat untuk cetak ulang.`, "info", "Sudah Check-In");
+        return;
+    }
+
+    // HITUNG KODE LOGISTIK SECARA KETAT & URUT (ANTI-DUPLIKAT)
+    // Kumpulkan seluruh nomor yang sudah terpakai oleh peserta mana pun
+    const usedNumbers = new Set();
+    State.currentMasterList.forEach(item => {
+        if (item.kodeLogistik && typeof item.kodeLogistik === 'string') {
+            const match = item.kodeLogistik.match(/\d+/);
+            if (match) {
+                usedNumbers.add(parseInt(match[0], 10));
+            }
+        }
+    });
+
+    // Cari nomor urut terkecil yang belum pernah dipakai sama sekali
+    let nextNum = 1;
+    while (usedNumbers.has(nextNum)) {
+        nextNum++;
+    }
+
+    const logCode = "LOG-" + String(nextNum).padStart(3, '0');
+
+    document.getElementById('ciResNama').textContent = p.nama;
+    document.getElementById('ciResKat').textContent = p.kategori;
+    document.getElementById('ciResBib').textContent = p.bibNumber;
+    document.getElementById('logistikCodeDisplay').textContent = logCode;
+    document.getElementById('qrCodeImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${logCode}`;
+    document.getElementById('checkinSuccessModal').classList.remove('hidden');
+    this.reset();
+
+    // Simpan ke Firestore dan perbarui data lokal
+    p.checkedIn = true;
+    p.kodeLogistik = logCode;
+    p.logistikDiambil = "";
+
+    await updatePeserta(p.kode, { 
+        checkedIn: true, 
+        kodeLogistik: logCode, 
+        logistikDiambil: "" 
+    });
+
+    refreshActivePageUI();
 });
 
 window.closeCheckinModal = function() { document.getElementById('checkinSuccessModal').classList.add('hidden'); };
