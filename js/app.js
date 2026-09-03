@@ -1884,41 +1884,49 @@ State.currentCategoryModalList = [];
 State.currentCategoryModalTitle = '';
 
 window.showCategoryParticipantsModal = function(encodedKat) {
-    const kat = decodeURIComponent(encodedKat);
+    const kat = decodeURIComponent(encodedKat).trim();
     const list = State.currentMasterList.filter(p => {
         const pKat = (p.kategori || '').trim();
-        return pKat === kat || (pKat === '' && kat === 'Tidak Diketahui');
+        return pKat.toLowerCase() === kat.toLowerCase() || (pKat === '' && kat === 'Tidak Diketahui');
     });
 
     State.currentCategoryModalList = list;
     State.currentCategoryModalTitle = `Kategori: ${kat}`;
 
-    document.getElementById('catModalTitle').textContent = `Peserta ${kat}`;
-    document.getElementById('catModalSubtitle').textContent = `Total: ${list.length} Peserta Terdaftar`;
+    const titleEl = document.getElementById('catModalTitle');
+    const subEl = document.getElementById('catModalSubtitle');
+    const modalEl = document.getElementById('categoryPesertaModal');
+
+    if (titleEl) titleEl.textContent = `Peserta ${kat}`;
+    if (subEl) subEl.textContent = `Total: ${list.length} Peserta Terdaftar`;
     const searchInput = document.getElementById('catModalSearch');
     if (searchInput) searchInput.value = '';
 
     renderCatModalRows(list);
-    document.getElementById('categoryPesertaModal').classList.remove('hidden');
+    if (modalEl) modalEl.classList.remove('hidden');
 };
 
 window.showJerseyParticipantsModal = function(encodedSize) {
-    const size = decodeURIComponent(encodedSize);
+    const size = decodeURIComponent(encodedSize).trim();
     const list = State.currentMasterList.filter(p => {
         const pJersey = (p.jersey || '').trim();
-        return pJersey === size || (pJersey === '' && size === 'Lainnya');
+        return pJersey.toLowerCase() === size.toLowerCase() || (pJersey === '' && size === 'Lainnya');
     });
 
     State.currentCategoryModalList = list;
     State.currentCategoryModalTitle = `Ukuran Jersey: ${size}`;
 
-    document.getElementById('catModalTitle').textContent = `Peserta Ukuran Jersey ${size}`;
-    document.getElementById('catModalSubtitle').textContent = `Total: ${list.length} Peserta Memilih Ukuran Ini`;
+    const titleEl = document.getElementById('catModalTitle');
+    const subEl = document.getElementById('catModalSubtitle');
+    const modalEl = document.getElementById('categoryPesertaModal');
+
+    if (titleEl) titleEl.textContent = `Peserta Ukuran Jersey ${size}`;
+    if (subEl) subEl.textContent = `Total: ${list.length} Peserta Memilih Ukuran Ini`;
     const searchInput = document.getElementById('catModalSearch');
     if (searchInput) searchInput.value = '';
 
     renderCatModalRows(list);
-    document.getElementById('categoryPesertaModal').classList.remove('hidden');
+    if (modalEl) modalEl.classList.remove('hidden');
 };
 
 window.closeCategoryPesertaModal = function() {
