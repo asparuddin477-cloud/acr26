@@ -76,6 +76,7 @@ window.nav = function(pageId) {
         if(pageId === 'logistik') { renderLogistikData(); }
         if(pageId === 'status') { renderPublicParticipants(); }
         if(pageId === 'checkin') { renderCheckinHistory(); }
+        if(pageId === 'bibcheck') { resetBibSearch(); }
     });
 };
 
@@ -2063,6 +2064,199 @@ window.syncLegacyToFirestore = async function() {
     } catch(err) {
         window.showLoading(false);
         await window.customAlert("Gagal sinkronisasi ke Firebase:<br><br>" + err.message + "<br><br><em>Pastikan Cloud Firestore telah di-enable (Start in Test Mode) di Firebase Console.</em>", "error");
+    }
+};
+
+// =====================================================================
+// BIB CHECK & PHOTO KIOSK
+// =====================================================================
+window.handleBibSearchInput = function(query) {
+    const resBox = document.getElementById('bibSearchResults');
+    if (!resBox) return;
+    const q = (query || '').toLowerCase().trim();
+    if (q.length < 1) {
+        resBox.classList.add('hidden');
+        resBox.innerHTML = '';
+        return;
+    }
+
+    const qDigits = q.replace(/\D/g, '');
+
+    const matches = State.currentMasterList.filter(p => {
+        const nama = (p.nama || '').toLowerCase();
+        const bibName = (p.bibName || '').toLowerCase();
+        const bibNumber = (p.bibNumber || '').toLowerCase();
+        const kode = (p.kode || '').toLowerCase();
+        const bibDigits = bibNumber.replace(/\D/g, '');
+
+        return nama.includes(q) ||
+               bibName.includes(q) ||
+               bibNumber.includes(q) ||
+               kode.includes(q) ||
+               (qDigits.length > 0 && (bibDigits === qDigits || bibDigits.endsWith(qDigits)));
+    }).slice(0, 10);
+
+    if (matches.length === 0) {
+        resBox.innerHTML = '<div class="p-4 text-center text-slate-400 text-xs">Peserta tidak ditemukan. Periksa kembali ejaan nama, nomor BIB, atau kode pendaftaran.</div>';
+        resBox.classList.remove('hidden');
+        return;
+    }
+
+    const rows = matches.map(p => `
+        <div onclick="showBibScreen('${p.kode}')" class="p-3 sm:p-4 hover:bg-indigo-50 cursor-pointer transition flex justify-between items-center group">
+            <div>
+                <div class="font-bold text-slate-800 text-sm group-hover:text-indigo-600 uppercase">${p.nama}</div>
+                <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                    <span>${p.kategori || '-'}</span>
+                    <span class="text-slate-300">•</span>
+                    <span class="font-mono text-blue-600 font-bold">BIB: ${p.bibNumber || 'Belum ada BIB'}</span>
+                    <span class="text-slate-300">•</span>
+                    <span class="font-mono text-slate-400">${p.kode}</span>
+                </div>
+            </div>
+            <button type="button" class="px-3 py-1 bg-indigo-600 group-hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1">
+                <span>Pilih</span> 📸
+            </button>
+        </div>
+    `);
+
+    resBox.innerHTML = rows.join('');
+    resBox.classList.remove('hidden');
+};
+
+window.submitBibSearch = function() {
+    const input = document.getElementById('bibSearchInput');
+    if (!input) return;
+    const q = input.value.toLowerCase().trim();
+    if (!q) return;
+
+    const qDigits = q.replace(/\D/g, '');
+
+    const match = State.currentMasterList.find(p => {
+        const nama = (p.nama || '').toLowerCase();
+        const bibName = (p.bibName || '').toLowerCase();
+        const bibNumber = (p.bibNumber || '').toLowerCase();
+        const kode = (p.kode || '').toLowerCase();
+        const bibDigits = bibNumber.replace(/\D/g, '');
+
+        return bibNumber === q ||
+               kode === q ||
+               nama === q ||
+               bibName === q ||
+               (qDigits.length > 0 && (bibDigits === qDigits || bibDigits.endsWith(qDigits))) ||
+               nama.includes(q) ||
+               bibName.includes(q) ||
+               bibNumber.includes(q) ||
+               kode.includes(q);
+    });
+
+    if (match) {
+        showBibScreen(match.kode);
+    } else {
+        window.customAlert("Peserta tidak ditemukan! Pastikan nama, nomor BIB, atau kode pendaftaran sudah sesuai.", "warning", "Tidak Ditemukan");
+    }
+};
+
+window.showBibScreen = function(kode) {
+    const p = State.currentMasterList.find(x => x.kode === kode);
+    if (!p) return;
+
+    // Sembunyikan dropdown hasil
+    const resBox = document.getElementById('bibSearchResults');
+    if (resBox) resBox.classList.add('hidden');
+
+    let kategoriDisplay = p.kategori || '5K UMUM';
+    let bibDisplay = p.bibNumber || p.kode || '-';
+
+    document.getElementById('dispBibKategori').textContent = kategoriDisplay;
+    document.getElementById('dispBibNumber').textContent = bibDisplay;
+    document.getElementById('dispBibName').textContent = (p.bibName && p.bibName.trim()) ? p.bibName.toUpperCase() : p.nama.toUpperCase();
+    document.getElementById('dispNamaLengkap').textContent = p.nama.toUpperCase();
+    document.getElementById('dispBibJersey').textContent = p.jersey || '-';
+    document.getElementById('dispBibKode').textContent = p.kode;
+
+    const statusBadge = document.getElementById('dispBibStatusBadge');
+    if (statusBadge) {
+        if (p.status === 'Verified') {
+            statusBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 flex items-center gap-1";
+            statusBadge.innerHTML = "<span>✅ Verified / Siap Lomba</span>";
+        } else {
+            statusBadge.className = "px-3 py-1 bg-yellow-100 text-yellow-800 rounded-lg border border-yellow-200 flex items-center gap-1";
+            statusBadge.innerHTML = `<span>⏳ ${p.status}</span>`;
+        }
+    }
+
+    const wrapper = document.getElementById('bibDisplayWrapper');
+    if (wrapper) wrapper.classList.remove('hidden');
+
+    const searchContainer = document.getElementById('bibSearchContainer');
+    if (searchContainer) searchContainer.classList.add('hidden');
+
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.resetBibSearch = function() {
+    const searchContainer = document.getElementById('bibSearchContainer');
+    if (searchContainer) searchContainer.classList.remove('hidden');
+
+    const wrapper = document.getElementById('bibDisplayWrapper');
+    if (wrapper) wrapper.classList.add('hidden');
+
+    const input = document.getElementById('bibSearchInput');
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+};
+
+window.toggleBibFullscreen = function() {
+    const elem = document.getElementById('bibPhotoBackdrop');
+    if (!elem) return;
+
+    if (!document.fullscreenElement) {
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        }
+        const btnText = document.getElementById('fullscreenBtnText');
+        if (btnText) btnText.textContent = "Keluar Fullscreen";
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+        const btnText = document.getElementById('fullscreenBtnText');
+        if (btnText) btnText.textContent = "Layar Penuh (TV Kiosk)";
+    }
+};
+
+window.downloadBibPoster = async function() {
+    const elem = document.getElementById('bibPhotoBackdrop');
+    if (!elem) return;
+
+    window.showLoading(true, "Membuat Gambar Foto BIB...");
+    try {
+        if (typeof html2canvas === 'undefined') {
+            throw new Error("Library pembuat gambar sedang dimuat, silakan coba 2 detik lagi.");
+        }
+        const canvas = await html2canvas(elem, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null
+        });
+
+        const link = document.createElement('a');
+        const bibNum = (document.getElementById('dispBibNumber').textContent || 'BIB').trim();
+        link.download = `BIB_CHECK_${bibNum}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        window.showLoading(false);
+    } catch(err) {
+        window.showLoading(false);
+        window.customAlert("Gagal mengunduh gambar poster: " + err.message, "error");
     }
 };
 
