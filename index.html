@@ -367,7 +367,7 @@
         </section>
 
         <!-- ==================== PAGE: BIB CHECK & PHOTO KIOSK ==================== -->
-        <section id="page-bibcheck" class="page-section max-w-4xl mx-auto">
+        <section id="page-bibcheck" class="page-section max-w-6xl mx-auto w-full">
             <!-- Search & Filter Card -->
             <div id="bibSearchContainer" class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 sm:p-8 text-center mb-6">
                 <div class="inline-flex items-center justify-center w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl mb-3 shadow-inner">
@@ -419,71 +419,71 @@
                 </div>
 
                 <!-- THE DIGITAL BACKDROP BOARD (Inspired by Jakarta Running Festival & Alpha Chase Run) -->
-                <div id="bibPhotoBackdrop" class="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-br from-[#0284c7] via-[#0369a1] to-[#0f172a] text-white p-6 sm:p-10 border-4 border-cyan-400/40 flex flex-col justify-between min-h-[560px] sm:min-h-[620px]">
+                <div id="bibPhotoBackdrop" class="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-br from-[#0284c7] via-[#0369a1] to-[#0f172a] text-white p-4 sm:p-8 md:p-10 border-4 border-cyan-400/40 flex flex-col justify-between min-h-[580px] sm:min-h-[660px]">
                     <!-- Futuristic Background Elements -->
                     <div class="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]"></div>
                     <div class="absolute -right-24 -top-24 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none"></div>
                     <div class="absolute -left-24 -bottom-24 w-96 h-96 bg-blue-600/30 rounded-full blur-3xl pointer-events-none"></div>
 
                     <!-- Top Bar: Event Brand & BIB CHECK Title -->
-                    <div class="relative z-10 flex justify-between items-start border-b border-white/20 pb-4 mb-6">
-                        <div class="flex items-center space-x-3">
-                            <img src="images/logo.png" alt="Logo Alpha Chase Run" class="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-xl flex-shrink-0">
+                    <div class="relative z-10 flex justify-between items-center border-b border-white/20 pb-4 mb-4 sm:mb-6">
+                        <div class="flex items-center space-x-3 sm:space-x-4">
+                            <img src="images/logo.png" alt="Logo Alpha Chase Run" class="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain drop-shadow-xl flex-shrink-0">
                             <div>
-                                <h3 class="font-black text-xl sm:text-2xl tracking-wider uppercase text-white drop-shadow">ALPHA CHASE RUN</h3>
-                                <p class="text-[11px] sm:text-xs text-cyan-200 font-medium tracking-widest uppercase">2026 • OFFICIAL RACE PACK COLLECTION</p>
+                                <h3 class="font-black text-xl sm:text-3xl md:text-4xl tracking-wider uppercase text-white drop-shadow">ALPHA CHASE RUN</h3>
+                                <p class="text-[11px] sm:text-sm md:text-base text-cyan-200 font-semibold tracking-widest uppercase">2026 • OFFICIAL RACE PACK COLLECTION</p>
                             </div>
                         </div>
 
                         <div class="text-right">
-                            <div class="inline-block px-3.5 py-1.5 bg-white/15 backdrop-blur-md rounded-2xl border border-white/25 shadow-sm">
-                                <span class="text-xl sm:text-3xl font-black tracking-widest text-cyan-300 drop-shadow uppercase">BIB CHECK</span>
+                            <div class="inline-block px-4 py-2 sm:px-6 sm:py-2.5 bg-white/15 backdrop-blur-md rounded-2xl border border-white/25 shadow-sm">
+                                <span class="text-xl sm:text-3xl md:text-4xl font-black tracking-widest text-cyan-300 drop-shadow uppercase">BIB CHECK</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Center Display: Giant Digital LED BIB Card -->
-                    <div class="relative z-10 my-auto">
-                        <div class="max-w-xl mx-auto bg-white/95 backdrop-blur-xl rounded-3xl p-6 sm:p-8 text-slate-800 shadow-2xl border-2 border-white text-center transform transition">
+                    <!-- Center Display: Giant Digital LED BIB Card (FULL WIDTH & EXTRA LARGE TEXT) -->
+                    <div class="relative z-10 my-auto w-full">
+                        <div class="w-full bg-white/95 backdrop-blur-xl rounded-3xl p-6 sm:p-10 md:p-12 text-slate-800 shadow-2xl border-2 border-white text-center transform transition">
                             
-                            <!-- Category Badge -->
-                            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-cyan-400 font-black text-xs sm:text-sm tracking-widest uppercase shadow-md mb-3">
-                                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                                <span id="dispBibKategori">10K - UMUM</span>
+                            <!-- Category Badge (Besar & Jelas) -->
+                            <div class="inline-flex items-center gap-2.5 px-6 py-2 sm:px-8 sm:py-2.5 rounded-full bg-slate-900 text-cyan-400 font-black text-sm sm:text-xl md:text-2xl tracking-widest uppercase shadow-md mb-2 sm:mb-4">
+                                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                                <span id="dispBibKategori">5K PELAJAR</span>
                             </div>
 
-                            <!-- Giant BIB Number -->
-                            <div class="my-2 sm:my-3">
-                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-1">OFFICIAL BIB NUMBER</span>
-                                <h1 id="dispBibNumber" class="text-6xl sm:text-8xl font-black tracking-tight text-blue-700 drop-shadow-sm font-mono leading-none">
+                            <!-- Giant BIB Number (Raksasa & Jelas untuk Foto) -->
+                            <div class="my-2 sm:my-4">
+                                <span class="text-xs sm:text-base md:text-lg font-extrabold text-slate-400 uppercase tracking-widest block mb-1 sm:mb-2">OFFICIAL BIB NUMBER</span>
+                                <h1 id="dispBibNumber" class="text-7xl sm:text-9xl md:text-[8.5rem] lg:text-[10rem] font-black tracking-tight text-blue-700 drop-shadow font-mono leading-none my-2 sm:my-4">
                                     31470
                                 </h1>
                             </div>
 
-                            <!-- Runner Name & BIB Name -->
-                            <div class="border-t border-slate-100 pt-3 mt-2">
-                                <h2 id="dispBibName" class="text-2xl sm:text-3xl font-black uppercase text-slate-900 tracking-wide">
+                            <!-- Runner Name & BIB Name (Ekstra Besar) -->
+                            <div class="border-t-2 border-slate-100 pt-4 sm:pt-6 mt-3 sm:mt-4">
+                                <h2 id="dispBibName" class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black uppercase text-slate-900 tracking-wide leading-tight">
                                     RAFI PACE
                                 </h2>
-                                <p id="dispNamaLengkap" class="text-xs sm:text-sm text-slate-500 font-semibold mt-0.5">
+                                <p id="dispNamaLengkap" class="text-base sm:text-2xl md:text-3xl text-slate-600 font-bold mt-1 sm:mt-2">
                                     Muhammad Rafi
                                 </p>
                             </div>
 
-                            <!-- Extra Meta Pill: Jersey & Status -->
-                            <div class="flex flex-wrap justify-center items-center gap-2 sm:gap-3 mt-4 pt-3 border-t border-slate-100 text-xs font-bold">
-                                <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 flex items-center gap-1">
+                            <!-- Extra Meta Pill: Jersey & Status (Lebih Besar & Rapi) -->
+                            <div class="flex flex-wrap justify-center items-center gap-3 sm:gap-4 mt-6 pt-5 border-t border-slate-200 text-xs sm:text-base md:text-lg font-bold">
+                                <span class="px-4 py-2 sm:px-6 sm:py-2.5 bg-blue-50 text-blue-700 rounded-xl border border-blue-200 flex items-center gap-2 shadow-sm">
                                     <span>👕 Jersey:</span>
-                                    <strong id="dispBibJersey" class="text-blue-900">L (Pendek)</strong>
+                                    <strong id="dispBibJersey" class="text-blue-950 font-black">L (Pendek)</strong>
                                 </span>
 
-                                <span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100 flex items-center gap-1">
+                                <span class="px-4 py-2 sm:px-6 sm:py-2.5 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-200 flex items-center gap-2 shadow-sm">
                                     <span>Kode:</span>
-                                    <strong id="dispBibKode" class="font-mono text-indigo-900">RUN-XXXXXX</strong>
+                                    <strong id="dispBibKode" class="font-mono text-indigo-950 font-black">RUN-XXXXXX</strong>
                                 </span>
 
-                                <span id="dispBibStatusBadge" class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 flex items-center gap-1">
-                                    <span>✅ Verified</span>
+                                <span id="dispBibStatusBadge" class="px-4 py-2 sm:px-6 sm:py-2.5 bg-emerald-100 text-emerald-800 rounded-xl border border-emerald-200 flex items-center gap-2 shadow-sm font-black">
+                                    <span>✅ Verified / Siap Lomba</span>
                                 </span>
                             </div>
                         </div>
@@ -491,13 +491,13 @@
 
                     <!-- Bottom Event Branding -->
                     <div class="relative z-10 mt-6 pt-4 border-t border-white/20 text-center">
-                        <h4 class="text-xl sm:text-2xl font-black tracking-wider text-yellow-300 drop-shadow uppercase">
+                        <h4 class="text-xl sm:text-3xl md:text-4xl font-black tracking-wider text-yellow-300 drop-shadow uppercase">
                             RACE PACK COLLECTION
                         </h4>
-                        <p class="text-xs sm:text-sm font-bold tracking-widest text-white/90 uppercase mt-0.5">
+                        <p class="text-xs sm:text-base md:text-lg font-bold tracking-widest text-white/95 uppercase mt-1">
                             ALPHA CHASE RUN 2026 • OFFICIAL RUNNER
                         </p>
-                        <p class="text-[10px] text-cyan-200 font-mono tracking-widest mt-1">
+                        <p class="text-[10px] sm:text-xs text-cyan-200 font-mono tracking-widest mt-1">
                             STRENGTH • HONOR • BROTHERHOOD
                         </p>
                     </div>
