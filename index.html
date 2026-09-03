@@ -1050,6 +1050,66 @@
                 
                 <input type="hidden" id="currentLogKode">
                 <button onclick="saveLogistikItems()" class="w-full px-4 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition text-sm shadow-md">Simpan Data Pengambilan</button>
+        <!-- Modal Detail Peserta Kategori / Jersey -->
+        <div id="categoryPesertaModal" class="hidden fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-3 sm:p-5 backdrop-blur-sm transition">
+            <div class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col border border-slate-100">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center p-5 sm:p-6 border-b border-slate-100 bg-slate-50/50">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <h3 id="catModalTitle" class="font-extrabold text-lg sm:text-2xl text-slate-800">Daftar Peserta</h3>
+                        </div>
+                        <p id="catModalSubtitle" class="text-xs sm:text-sm text-slate-500 font-medium mt-1">Menampilkan 0 peserta</p>
+                    </div>
+                    <button type="button" onclick="closeCategoryPesertaModal()" class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition active:scale-95">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Modal Controls (Search & Export) -->
+                <div class="p-4 sm:p-5 border-b border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div class="relative w-full sm:w-80">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                        <input type="text" id="catModalSearch" oninput="filterCatModalList(this.value)" placeholder="Cari nama, BIB, atau kode..." class="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:border-indigo-500 bg-slate-50 focus:bg-white transition">
+                    </div>
+
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        <button type="button" onclick="exportCategoryListToExcel()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Download Excel (.xlsx)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Table / List Body -->
+                <div class="flex-1 overflow-y-auto p-4 sm:p-6 no-scrollbar">
+                    <div class="overflow-x-auto rounded-2xl border border-slate-100 shadow-inner">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-[11px] font-bold tracking-wider">
+                                    <th class="py-3 px-3.5 text-center w-12">No</th>
+                                    <th class="py-3 px-3.5">BIB</th>
+                                    <th class="py-3 px-3.5">Nama Peserta</th>
+                                    <th class="py-3 px-3.5">Kategori / Jersey</th>
+                                    <th class="py-3 px-3.5 text-center">Status</th>
+                                    <th class="py-3 px-3.5">WhatsApp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="catModalTableBody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+                                <tr><td colspan="6" class="text-center py-8 text-slate-400">Memuat data peserta...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex justify-between items-center text-xs text-slate-500">
+                    <span id="catModalFilteredCount">Menampilkan 0 peserta</span>
+                    <button type="button" onclick="closeCategoryPesertaModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition">Tutup</button>
+                </div>
             </div>
         </div>
     </main>

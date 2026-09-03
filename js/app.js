@@ -1844,17 +1844,180 @@ window.renderLogistikData = function() {
     let jHtml = '';
     for (let size in jerseyCount) {
         if (size !== 'Lainnya' || jerseyCount[size] > 0) {
-            jHtml += `<div class="flex justify-between items-center bg-slate-50 p-3 mb-2 rounded-xl border border-slate-100"><span class="font-bold text-slate-700">Ukuran ${size}</span><span class="bg-blue-100 text-blue-700 py-1 px-3 rounded-lg font-bold">${jerseyCount[size]}</span></div>`;
+            jHtml += `
+                <div onclick="showJerseyParticipantsModal('${encodeURIComponent(size)}')" class="flex justify-between items-center bg-slate-50 hover:bg-blue-50/90 hover:border-blue-300 p-3 sm:p-3.5 mb-2.5 rounded-2xl border border-slate-200/80 cursor-pointer transition shadow-sm hover:shadow active:scale-[0.99] group">
+                    <div class="flex items-center space-x-2.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500 opacity-60 group-hover:opacity-100 group-hover:scale-125 transition"></span>
+                        <span class="font-bold text-slate-800 group-hover:text-blue-700 text-sm sm:text-base">Ukuran ${size}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-blue-100 group-hover:bg-blue-600 group-hover:text-white text-blue-800 py-1 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition shadow-sm">${jerseyCount[size]}</span>
+                        <span class="text-xs text-blue-600 font-semibold hidden sm:inline-block group-hover:underline">Lihat Peserta ➔</span>
+                    </div>
+                </div>`;
         }
     }
     document.getElementById('logistikJersey').innerHTML = list.length === 0 ? '<div class="text-center py-6 text-slate-400 text-xs">Belum ada data pendaftar.</div>' : jHtml;
 
     let kHtml = '';
     for (let kat in katCount) {
-        kHtml += `<div class="flex justify-between items-center bg-slate-50 p-3 mb-2 rounded-xl border border-slate-100"><span class="font-bold text-slate-700">${kat}</span><span class="bg-emerald-100 text-emerald-700 py-1 px-3 rounded-lg font-bold">${katCount[kat]}</span></div>`;
+        kHtml += `
+            <div onclick="showCategoryParticipantsModal('${encodeURIComponent(kat)}')" class="flex justify-between items-center bg-slate-50 hover:bg-emerald-50/90 hover:border-emerald-300 p-3 sm:p-3.5 mb-2.5 rounded-2xl border border-slate-200/80 cursor-pointer transition shadow-sm hover:shadow active:scale-[0.99] group">
+                <div class="flex items-center space-x-2.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 opacity-60 group-hover:opacity-100 group-hover:scale-125 transition"></span>
+                    <span class="font-bold text-slate-800 group-hover:text-emerald-700 text-sm sm:text-base">${kat}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 py-1 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition shadow-sm">${katCount[kat]}</span>
+                    <span class="text-xs text-emerald-600 font-semibold hidden sm:inline-block group-hover:underline">Lihat Peserta ➔</span>
+                </div>
+            </div>`;
     }
     document.getElementById('logistikKategori').innerHTML = list.length === 0 ? '<div class="text-center py-6 text-slate-400 text-xs">Belum ada data pendaftar.</div>' : kHtml;
     document.getElementById('logistikHistoryList').innerHTML = historyHtml === '' ? '<div class="text-center py-6 text-slate-400 text-xs">Belum ada riwayat pengambilan.</div>' : historyHtml;
+};
+
+// =====================================================================
+// POPUP DETAIL PESERTA PER KATEGORI & UKURAN JERSEY
+// =====================================================================
+State.currentCategoryModalList = [];
+State.currentCategoryModalTitle = '';
+
+window.showCategoryParticipantsModal = function(encodedKat) {
+    const kat = decodeURIComponent(encodedKat);
+    const list = State.currentMasterList.filter(p => {
+        const pKat = (p.kategori || '').trim();
+        return pKat === kat || (pKat === '' && kat === 'Tidak Diketahui');
+    });
+
+    State.currentCategoryModalList = list;
+    State.currentCategoryModalTitle = `Kategori: ${kat}`;
+
+    document.getElementById('catModalTitle').textContent = `Peserta ${kat}`;
+    document.getElementById('catModalSubtitle').textContent = `Total: ${list.length} Peserta Terdaftar`;
+    const searchInput = document.getElementById('catModalSearch');
+    if (searchInput) searchInput.value = '';
+
+    renderCatModalRows(list);
+    document.getElementById('categoryPesertaModal').classList.remove('hidden');
+};
+
+window.showJerseyParticipantsModal = function(encodedSize) {
+    const size = decodeURIComponent(encodedSize);
+    const list = State.currentMasterList.filter(p => {
+        const pJersey = (p.jersey || '').trim();
+        return pJersey === size || (pJersey === '' && size === 'Lainnya');
+    });
+
+    State.currentCategoryModalList = list;
+    State.currentCategoryModalTitle = `Ukuran Jersey: ${size}`;
+
+    document.getElementById('catModalTitle').textContent = `Peserta Ukuran Jersey ${size}`;
+    document.getElementById('catModalSubtitle').textContent = `Total: ${list.length} Peserta Memilih Ukuran Ini`;
+    const searchInput = document.getElementById('catModalSearch');
+    if (searchInput) searchInput.value = '';
+
+    renderCatModalRows(list);
+    document.getElementById('categoryPesertaModal').classList.remove('hidden');
+};
+
+window.closeCategoryPesertaModal = function() {
+    const modal = document.getElementById('categoryPesertaModal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.filterCatModalList = function(keyword) {
+    const q = (keyword || '').toLowerCase().trim();
+    if (!State.currentCategoryModalList) return;
+
+    if (!q) {
+        renderCatModalRows(State.currentCategoryModalList);
+        return;
+    }
+
+    const filtered = State.currentCategoryModalList.filter(p => {
+        return (p.nama && p.nama.toLowerCase().includes(q)) ||
+               (p.bibNumber && p.bibNumber.toLowerCase().includes(q)) ||
+               (p.kode && p.kode.toLowerCase().includes(q)) ||
+               (p.bibName && p.bibName.toLowerCase().includes(q)) ||
+               (p.wa && p.wa.toLowerCase().includes(q));
+    });
+
+    renderCatModalRows(filtered);
+};
+
+function renderCatModalRows(list) {
+    const tbody = document.getElementById('catModalTableBody');
+    const counter = document.getElementById('catModalFilteredCount');
+    if (counter) counter.textContent = `Menampilkan ${list.length} peserta`;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-medium">Tidak ada peserta yang cocok dengan pencarian.</td></tr>`;
+        return;
+    }
+
+    const rows = list.map((p, idx) => {
+        const statusBadge = p.status === 'Verified'
+            ? `<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">Verified</span>`
+            : `<span class="px-2.5 py-1 bg-yellow-100 text-yellow-800 rounded-lg text-xs font-bold">${p.status || 'Pending'}</span>`;
+
+        const waLink = p.wa ? `<a href="https://wa.me/${p.wa.replace(/\D/g, '')}" target="_blank" class="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline flex items-center gap-1">${p.wa}</a>` : '-';
+
+        return `
+            <tr class="hover:bg-slate-50/80 transition">
+                <td class="py-3 px-3.5 text-center font-bold text-slate-400">${idx + 1}</td>
+                <td class="py-3 px-3.5">
+                    <span class="font-mono font-black text-blue-700 text-sm bg-blue-50 px-2 py-0.5 rounded border border-blue-100">${p.bibNumber || '-'}</span>
+                </td>
+                <td class="py-3 px-3.5">
+                    <div class="font-bold text-slate-800 uppercase">${p.nama}</div>
+                    <div class="text-[11px] text-slate-400 font-mono">${p.kode} ${p.bibName ? '• ' + p.bibName : ''}</div>
+                </td>
+                <td class="py-3 px-3.5 text-slate-600">
+                    <div class="font-medium">${p.kategori || '-'}</div>
+                    <div class="text-[11px] text-slate-400">Jersey: <strong class="text-slate-700">${p.jersey || '-'}</strong></div>
+                </td>
+                <td class="py-3 px-3.5 text-center">${statusBadge}</td>
+                <td class="py-3 px-3.5">${waLink}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = rows.join('');
+}
+
+window.exportCategoryListToExcel = function() {
+    const list = State.currentCategoryModalList;
+    if (!list || list.length === 0) {
+        window.customAlert("Tidak ada data untuk di-download!", "warning", "Data Kosong");
+        return;
+    }
+
+    const title = State.currentCategoryModalTitle || "Kategori";
+    const cleanTitle = title.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    const headers = [
+        'No', 'Kode', 'Nomor BIB', 'Nama Lengkap', 'Nama di BIB', 'Kategori', 'Ukuran Jersey', 'Status', 'WhatsApp', 'Komunitas', 'Kota'
+    ];
+
+    const dataRows = list.map((p, idx) => [
+        idx + 1,
+        p.kode || '',
+        p.bibNumber || '',
+        p.nama || '',
+        p.bibName || '',
+        p.kategori || '',
+        p.jersey || '',
+        p.status || '',
+        p.wa || '',
+        p.komunitas || '',
+        p.kota || ''
+    ]);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+    XLSX.utils.book_append_sheet(wb, ws, "Daftar Peserta");
+    XLSX.writeFile(wb, `Peserta_${cleanTitle}.xlsx`);
 };
 
 // =====================================================================
