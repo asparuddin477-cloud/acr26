@@ -55,3 +55,21 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+    animation: shake 0.35s ease-in-out;
+}
+
+#startQrReader video {
+    object-fit: cover !important;
+    border-radius: 1.5rem !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+

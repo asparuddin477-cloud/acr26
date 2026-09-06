@@ -46,12 +46,17 @@ window.nav = function(pageId) {
     if (paymentInterval) { clearInterval(paymentInterval); paymentInterval = null; }
     
     // Keamanan Akses: Lindungi halaman admin jika belum login
-    const adminPages = ['dashboard', 'master', 'logistik', 'checkin', 'pengaturan'];
+    const adminPages = ['dashboard', 'master', 'logistik', 'checkin', 'pengaturan', 'startgate'];
     if (adminPages.includes(pageId) && State.role === 'guest') {
         pageId = 'akun';
     }
     if (State.role === 'panitia' && (pageId === 'dashboard' || pageId === 'master' || pageId === 'pengaturan')) {
         pageId = 'checkin';
+    }
+
+    // Hentikan scanner kamera jika berpindah dari halaman startgate
+    if (pageId !== 'startgate' && window.stopStartGateScanner) {
+        window.stopStartGateScanner();
     }
 
     State.activePage = pageId;
@@ -77,6 +82,8 @@ window.nav = function(pageId) {
         if(pageId === 'status') { renderPublicParticipants(); }
         if(pageId === 'checkin') { renderCheckinHistory(); }
         if(pageId === 'bibcheck') { resetBibSearch(); }
+        if(pageId === 'startgate') { initStartGatePage(); }
+        if(pageId === 'startlive') { initStartLivePage(); }
     });
 };
 
@@ -152,6 +159,8 @@ function refreshActivePageUI() {
     if (State.activePage === 'logistik') renderLogistikData();
     if (State.activePage === 'status') renderPublicParticipants();
     if (State.activePage === 'checkin') renderCheckinHistory();
+    if (State.activePage === 'startlive') { renderStartLiveFeed(); updateStartLiveCounters(); }
+    if (State.activePage === 'startgate') updateStartGateCounters();
 }
 
 // Fallback jika Firebase belum diatur (LocalStorage)
@@ -195,7 +204,7 @@ async function addPeserta(payload) {
 async function updatePeserta(kode, updateFields) {
     const db = getDb();
     if (db) {
-        await db.collection('peserta').doc(kode).update(updateFields);
+        await db.collection('peserta').doc(kode).set(updateFields, { merge: true });
     } else {
         const idx = State.currentMasterList.findIndex(p => p.kode === kode);
         if (idx !== -1) {
@@ -765,7 +774,20 @@ document.getElementById('formDaftar').addEventListener('submit', async function(
     const targetWord = words.find(w => /^[A-Za-z]+$/.test(w) && w.toUpperCase() !== 'K' && w.toUpperCase() !== 'KM') || words.find(w => /^[A-Za-z]+$/.test(w)) || "X";
     const catPrefix = targetWord.charAt(0).toUpperCase();
     
-    const newBib = catPrefix + "-" + String(State.currentMasterList.length + 1).padStart(3, '0');
+    // Format nomor BIB mulai dari angka 1000 (misal urut 1 = P-1001, urut 2 = P-1002, dst)
+    let nextBibSeq = 1000 + State.currentMasterList.length + 1;
+    State.currentMasterList.forEach(p => {
+        if (p.bibNumber) {
+            const m = String(p.bibNumber).match(/\d+$/);
+            if (m) {
+                const num = parseInt(m[0], 10);
+                if (num >= nextBibSeq) {
+                    nextBibSeq = num + 1;
+                }
+            }
+        }
+    });
+    const newBib = catPrefix + "-" + nextBibSeq;
     
     let hargaDasar = 0;
     const match = kategoriText.match(/\(Rp\s*([\d.]+)\)/i);
@@ -1026,8 +1048,16 @@ document.getElementById('formStatus').addEventListener('submit', async function(
                 document.getElementById('resBib').classList.add('text-2xl', 'text-blue-300');
                 document.getElementById('resBibName').textContent = "DIBERIKAN SAAT CHECK-IN";
             }
+            const statusQrBox = document.getElementById('statusQrBox');
+            const statusQrImg = document.getElementById('statusQrImg');
+            if (statusQrBox && statusQrImg) {
+                statusQrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(p.bibNumber || p.kode)}`;
+                statusQrBox.classList.remove('hidden');
+            }
         } else { 
             bibBox.classList.add('hidden'); 
+            const statusQrBox = document.getElementById('statusQrBox');
+            if (statusQrBox) statusQrBox.classList.add('hidden');
         }
         resBox.classList.remove('hidden');
     } else { 
@@ -2335,10 +2365,10 @@ window.handleBibSearchInput = function(query) {
     const qDigits = q.replace(/\D/g, '');
 
     const matches = State.currentMasterList.filter(p => {
-        const nama = (p.nama || '').toLowerCase();
-        const bibName = (p.bibName || '').toLowerCase();
-        const bibNumber = (p.bibNumber || '').toLowerCase();
-        const kode = (p.kode || '').toLowerCase();
+        const nama = String(p.nama || '').toLowerCase();
+        const bibName = String(p.bibName || '').toLowerCase();
+        const bibNumber = String(p.bibNumber || '').toLowerCase();
+        const kode = String(p.kode || '').toLowerCase();
         const bibDigits = bibNumber.replace(/\D/g, '');
 
         return nama.includes(q) ||
@@ -2385,10 +2415,10 @@ window.submitBibSearch = function() {
     const qDigits = q.replace(/\D/g, '');
 
     const match = State.currentMasterList.find(p => {
-        const nama = (p.nama || '').toLowerCase();
-        const bibName = (p.bibName || '').toLowerCase();
-        const bibNumber = (p.bibNumber || '').toLowerCase();
-        const kode = (p.kode || '').toLowerCase();
+        const nama = String(p.nama || '').toLowerCase();
+        const bibName = String(p.bibName || '').toLowerCase();
+        const bibNumber = String(p.bibNumber || '').toLowerCase();
+        const kode = String(p.kode || '').toLowerCase();
         const bibDigits = bibNumber.replace(/\D/g, '');
 
         return bibNumber === q ||
@@ -2412,22 +2442,28 @@ window.submitBibSearch = function() {
 window.showBibScreen = function(kode) {
     const p = State.currentMasterList.find(x => x.kode === kode);
     if (!p) return;
+    State.currentBibPeserta = p;
+    window.currentSelectedBibRunner = p;
 
     // Sembunyikan dropdown hasil
     const resBox = document.getElementById('bibSearchResults');
     if (resBox) resBox.classList.add('hidden');
 
     // Bersihkan nominal rupiah, contoh "5K Pelajar (Rp 175.000)" -> "5K PELAJAR"
-    let rawKat = (p.kategori || '5K Pelajar').replace(/\s*\([^)]*\)/g, '').trim();
+    let rawKat = String(p.kategori || '5K Pelajar').replace(/\s*\([^)]*\)/g, '').trim();
     let kategoriDisplay = rawKat.toUpperCase();
-    let bibDisplay = p.bibNumber || p.kode || '-';
+    let bibDisplay = String(p.bibNumber || p.kode || '-');
+
+    const bibNameSafe = (p.bibName !== undefined && p.bibName !== null) ? String(p.bibName).trim() : '';
+    const namaSafe = (p.nama !== undefined && p.nama !== null) ? String(p.nama).trim() : '';
+    const displayBibName = (bibNameSafe ? bibNameSafe : namaSafe).toUpperCase();
 
     document.getElementById('dispBibKategori').textContent = kategoriDisplay;
     document.getElementById('dispBibNumber').textContent = bibDisplay;
-    document.getElementById('dispBibName').textContent = (p.bibName && p.bibName.trim()) ? p.bibName.toUpperCase() : p.nama.toUpperCase();
-    document.getElementById('dispNamaLengkap').textContent = p.nama.toUpperCase();
-    document.getElementById('dispBibJersey').textContent = p.jersey || '-';
-    document.getElementById('dispBibKode').textContent = p.kode;
+    document.getElementById('dispBibName').textContent = displayBibName;
+    document.getElementById('dispNamaLengkap').textContent = namaSafe.toUpperCase();
+    document.getElementById('dispBibJersey').textContent = String(p.jersey || '-');
+    document.getElementById('dispBibKode').textContent = String(p.kode || '');
 
     const statusBadge = document.getElementById('dispBibStatusBadge');
     if (statusBadge) {
@@ -2440,6 +2476,11 @@ window.showBibScreen = function(kode) {
         }
     }
 
+    const qrEl = document.getElementById('dispBibQrCode');
+    if (qrEl) {
+        qrEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(p.bibNumber || p.kode)}`;
+    }
+
     const wrapper = document.getElementById('bibDisplayWrapper');
     if (wrapper) wrapper.classList.remove('hidden');
 
@@ -2450,6 +2491,8 @@ window.showBibScreen = function(kode) {
 };
 
 window.resetBibSearch = function() {
+    State.currentBibPeserta = null;
+    window.currentSelectedBibRunner = null;
     const searchContainer = document.getElementById('bibSearchContainer');
     if (searchContainer) searchContainer.classList.remove('hidden');
 
@@ -2515,6 +2558,611 @@ window.downloadBibPoster = async function() {
 };
 
 // =====================================================================
+// FITUR CETAK & DOWNLOAD LEMBAR NOMOR BIB RESMI + QR CODE (A5 LANDSCAPE)
+// =====================================================================
+
+function getCurrentSelectedBibRunner() {
+    if (window.currentSelectedBibRunner) return window.currentSelectedBibRunner;
+    if (State.currentBibPeserta) return State.currentBibPeserta;
+    const kodeEl = document.getElementById('dispBibKode');
+    if (kodeEl && kodeEl.textContent) {
+        const p = State.currentMasterList.find(x => x.kode === kodeEl.textContent.trim());
+        if (p) return p;
+    }
+    const bibEl = document.getElementById('dispBibNumber');
+    if (bibEl && bibEl.textContent) {
+        const b = bibEl.textContent.trim();
+        const p = State.currentMasterList.find(x => x.bibNumber === b);
+        if (p) return p;
+    }
+    return null;
+}
+
+// Helper untuk generate QR Code element offline menggunakan QRCode.js
+async function getBibQrCodeElement(qrText, targetSize = 340) {
+    qrText = String(qrText || 'ACR-2026').trim();
+    if (!qrText) qrText = 'ACR-2026';
+
+    return new Promise((resolve) => {
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'fixed';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '-9999px';
+        tempDiv.style.visibility = 'hidden';
+        document.body.appendChild(tempDiv);
+
+        try {
+            new QRCode(tempDiv, {
+                text: qrText,
+                width: targetSize,
+                height: targetSize,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            // Cari elemen canvas hasil render
+            const cvs = tempDiv.querySelector('canvas');
+            if (cvs && cvs.width > 0) {
+                resolve({ element: cvs, cleanup: () => { if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv); } });
+                return;
+            }
+
+            const img = tempDiv.querySelector('img');
+            if (img) {
+                if (img.complete && img.naturalWidth > 0) {
+                    resolve({ element: img, cleanup: () => { if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv); } });
+                } else {
+                    img.onload = () => resolve({ element: img, cleanup: () => { if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv); } });
+                    img.onerror = () => resolve({ element: cvs || img, cleanup: () => { if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv); } });
+                }
+            } else {
+                resolve({ element: null, cleanup: () => { if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv); } });
+            }
+        } catch (e) {
+            console.error("QR Code generation error:", e);
+            resolve({ element: null, cleanup: () => { if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv); } });
+        }
+    });
+}
+
+// Render kanvas lembar BIB A5 Landscape resolusi tinggi (1754 x 1240 px)
+window.createBibCanvas = async function(p, customScale = 1.0) {
+    const W = Math.round(1754 * customScale);
+    const H = Math.round(1240 * customScale);
+    const scale = customScale;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // 1. Background putih bersih
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    // Skema Warna Kategori
+    const katStr = (p.kategori || '').toLowerCase();
+    let katTitle = '5K UMUM';
+    let themeDark = '#064e3b';
+    let themeColor = '#047857'; // Emerald
+    let themeLight = '#ecfdf5';
+    let themeBorder = '#a7f3d0';
+
+    if (katStr.includes('pelajar')) {
+        katTitle = '5K PELAJAR';
+        themeDark = '#1e3a8a';
+        themeColor = '#1d4ed8'; // Blue
+        themeLight = '#eff6ff';
+        themeBorder = '#bfdbfe';
+    } else if (katStr.includes('kid')) {
+        katTitle = '2,5K KIDS';
+        themeDark = '#92400e';
+        themeColor = '#d97706'; // Amber / Orange
+        themeLight = '#fffbeb';
+        themeBorder = '#fde68a';
+    } else if (katStr.includes('fun')) {
+        katTitle = '5K FUN RUN';
+        themeDark = '#5b21b6';
+        themeColor = '#7c3aed'; // Purple
+        themeLight = '#f5f3ff';
+        themeBorder = '#ddd6fe';
+    } else if (p.kategori) {
+        katTitle = String(p.kategori).replace(/\s*\([^)]*\)/g, '').trim().toUpperCase();
+    }
+
+    // Garis bingkai luar halus
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 4 * scale;
+    ctx.strokeRect(30 * scale, 30 * scale, W - 60 * scale, H - 60 * scale);
+
+    // 2. Tanda 4 Lubang Peniti (Crosshair Pin-Hole Guides)
+    const pinHoles = [
+        { x: 90 * scale, y: 80 * scale },
+        { x: W - 90 * scale, y: 80 * scale },
+        { x: 90 * scale, y: H - 80 * scale },
+        { x: W - 90 * scale, y: H - 80 * scale }
+    ];
+
+    pinHoles.forEach(pt => {
+        ctx.save();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2.5 * scale;
+        ctx.setLineDash([4 * scale, 4 * scale]);
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 14 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1.5 * scale;
+        ctx.beginPath();
+        ctx.moveTo(pt.x - 20 * scale, pt.y);
+        ctx.lineTo(pt.x + 20 * scale, pt.y);
+        ctx.moveTo(pt.x, pt.y - 20 * scale);
+        ctx.lineTo(pt.x, pt.y + 20 * scale);
+        ctx.stroke();
+        ctx.restore();
+    });
+
+    // 3. Header Banner (Pita Kategori Atas)
+    const headerTop = 45 * scale;
+    const headerH = 175 * scale;
+    const headerLeft = 60 * scale;
+    const headerW = W - 120 * scale;
+
+    // Background Header Gradasi
+    const grad = ctx.createLinearGradient(headerLeft, headerTop, headerLeft + headerW, headerTop);
+    grad.addColorStop(0, themeDark);
+    grad.addColorStop(1, themeColor);
+    ctx.fillStyle = grad;
+    
+    // Rounded header top banner
+    roundRect(ctx, headerLeft, headerTop, headerW, headerH, 20 * scale);
+    ctx.fill();
+
+    // Gambar Logo ACR jika ada di halaman
+    const logoImg = document.querySelector('img[src="images/logo.png"]');
+    if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+        ctx.drawImage(logoImg, headerLeft + 25 * scale, headerTop + 20 * scale, 135 * scale, 135 * scale);
+    }
+
+    // Teks Event Header
+    const textX = (logoImg && logoImg.complete && logoImg.naturalWidth > 0) ? headerLeft + 180 * scale : headerLeft + 40 * scale;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `900 ${46 * scale}px "Montserrat", "Arial Black", sans-serif`;
+    ctx.fillText("ALPHA CHASE RUN 2026", textX, headerTop + 75 * scale);
+
+    ctx.fillStyle = '#e0f2fe';
+    ctx.font = `700 ${22 * scale}px sans-serif`;
+    ctx.fillText("OFFICIAL RACE BIB  •  27 SEPTEMBER 2026  •  BONTANG LESTARI", textX, headerTop + 125 * scale);
+
+    // Badge Kategori (Kanan Atas)
+    const badgeW = 420 * scale;
+    const badgeH = 76 * scale;
+    const badgeX = headerLeft + headerW - badgeW - 25 * scale;
+    const badgeY = headerTop + (headerH - badgeH) / 2;
+
+    ctx.fillStyle = '#ffffff';
+    roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 38 * scale);
+    ctx.fill();
+
+    ctx.fillStyle = themeColor;
+    ctx.font = `900 ${36 * scale}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(katTitle, badgeX + badgeW / 2, badgeY + 52 * scale);
+    ctx.textAlign = 'left'; // reset
+
+    // 4. Area Konten Utama (BIB Number + Nama + Detail)
+    const contentLeft = 90 * scale;
+
+    // Label Official BIB
+    ctx.fillStyle = '#64748b';
+    ctx.font = `800 ${22 * scale}px sans-serif`;
+    ctx.fillText("NOMOR DADA RESMI (OFFICIAL BIB NUMBER)", contentLeft, 275 * scale);
+
+    // NOMOR BIB RAKSASA (Hero of the BIB)
+    const bibStr = String(p.bibNumber || p.kode || '1000').trim();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = `900 ${220 * scale}px "Courier New", monospace, sans-serif`;
+    ctx.fillText(bibStr, contentLeft - 8 * scale, 480 * scale);
+
+    // Box Nama Pelari (BIB Name / Full Name)
+    const rawBibName = (p.bibName !== undefined && p.bibName !== null) ? String(p.bibName).trim() : '';
+    const rawNama = (p.nama !== undefined && p.nama !== null) ? String(p.nama).trim() : '';
+    const runnerBibName = (rawBibName ? rawBibName : rawNama).toUpperCase();
+    ctx.fillStyle = themeDark;
+    ctx.font = `900 ${60 * scale}px sans-serif`;
+    ctx.fillText(runnerBibName, contentLeft, 575 * scale);
+
+    // Nama Lengkap & Kode Registrasi
+    ctx.fillStyle = '#475569';
+    ctx.font = `700 ${28 * scale}px sans-serif`;
+    const subNameStr = (rawNama ? rawNama.toUpperCase() : '') + (p.kode ? `  •  ID: ${String(p.kode).trim()}` : '');
+    ctx.fillText(subNameStr, contentLeft, 625 * scale);
+
+    // 5. Box QR Code Resmi (Kanan Tengah)
+    const qrBoxW = 410 * scale;
+    const qrBoxH = 550 * scale;
+    const qrBoxX = W - qrBoxW - 85 * scale;
+    const qrBoxY = 245 * scale;
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 3 * scale;
+    roundRect(ctx, qrBoxX, qrBoxY, qrBoxW, qrBoxH, 24 * scale);
+    ctx.fill();
+    ctx.stroke();
+
+    // Generate QR Code Element (Encodes bibNumber or kode)
+    const qrCodeText = String(p.bibNumber || p.kode || '').trim();
+    const qrTargetSize = Math.round(330 * scale);
+    const qrResult = await getBibQrCodeElement(qrCodeText, qrTargetSize);
+
+    if (qrResult && qrResult.element) {
+        const qrDrawX = qrBoxX + (qrBoxW - qrTargetSize) / 2;
+        const qrDrawY = qrBoxY + 30 * scale;
+        ctx.drawImage(qrResult.element, qrDrawX, qrDrawY, qrTargetSize, qrTargetSize);
+        qrResult.cleanup();
+    } else {
+        // Fallback jika QR offline gagal
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(qrBoxX + 40 * scale, qrBoxY + 40 * scale, 330 * scale, 330 * scale);
+        ctx.fillStyle = '#475569';
+        ctx.font = `700 ${20 * scale}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText("QR CODE RESMI", qrBoxX + qrBoxW / 2, qrBoxY + 200 * scale);
+        ctx.textAlign = 'left';
+    }
+
+    // Label di Bawah QR Code
+    ctx.textAlign = 'center';
+    ctx.fillStyle = themeColor;
+    ctx.font = `900 ${25 * scale}px sans-serif`;
+    ctx.fillText("SCAN START & FINISH", qrBoxX + qrBoxW / 2, qrBoxY + 415 * scale);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = `700 ${17 * scale}px sans-serif`;
+    ctx.fillText("VALIDASI GATE RESMI ACR 2026", qrBoxX + qrBoxW / 2, qrBoxY + 448 * scale);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = `800 ${22 * scale}px monospace`;
+    ctx.fillText(qrCodeText, qrBoxX + qrBoxW / 2, qrBoxY + 488 * scale);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `600 ${14 * scale}px sans-serif`;
+    ctx.fillText("TIDAK BOLEH DILIPAT / DITUTUP", qrBoxX + qrBoxW / 2, qrBoxY + 520 * scale);
+    ctx.textAlign = 'left'; // reset
+
+    // 6. Metadata Pelari Cards (Gender, Jersey, Komunitas/Kota, Status)
+    const cardY = 675 * scale;
+    const cardH = 95 * scale;
+    const cardSpacing = 16 * scale;
+    const cardAreaW = qrBoxX - contentLeft - 30 * scale;
+    const singleCardW = (cardAreaW - (cardSpacing * 2)) / 3;
+
+    const rawGender = String(p.gender || '').toUpperCase();
+    const genderVal = (rawGender === 'L' || rawGender.includes('LAKI') ? 'LAKI-LAKI' : (rawGender === 'P' || rawGender.includes('PEREMPUAN') ? 'PEREMPUAN' : (rawGender || '-')));
+    const rawKomunitas = (p.komunitas !== undefined && p.komunitas !== null) ? String(p.komunitas).trim() : '';
+    const rawKota = (p.kota !== undefined && p.kota !== null) ? String(p.kota).trim() : 'BONTANG';
+    const cityVal = (rawKomunitas ? rawKomunitas : rawKota).toUpperCase();
+
+    const metadataCards = [
+        {
+            title: "GENDER",
+            val: genderVal,
+            icon: "👤"
+        },
+        {
+            title: "JERSEY OFFICIAL",
+            val: String(p.jersey || '-').toUpperCase(),
+            icon: "🎽"
+        },
+        {
+            title: "KOMUNITAS / KOTA",
+            val: cityVal,
+            icon: "📍"
+        }
+    ];
+
+    metadataCards.forEach((c, idx) => {
+        const cx = contentLeft + idx * (singleCardW + cardSpacing);
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 2 * scale;
+        roundRect(ctx, cx, cardY, singleCardW, cardH, 16 * scale);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = `800 ${16 * scale}px sans-serif`;
+        ctx.fillText(c.title, cx + 18 * scale, cardY + 32 * scale);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = `900 ${22 * scale}px sans-serif`;
+        // Truncate jika terlalu panjang
+        let valText = c.val;
+        if (valText.length > 18) valText = valText.substring(0, 16) + '...';
+        ctx.fillText(valText, cx + 18 * scale, cardY + 68 * scale);
+    });
+
+    // Box Peringatan & Aturan Singkat Penggunaan BIB
+    const ruleBoxY = 795 * scale;
+    const ruleBoxH = 90 * scale;
+    ctx.fillStyle = themeLight;
+    ctx.strokeStyle = themeBorder;
+    ctx.lineWidth = 2 * scale;
+    roundRect(ctx, contentLeft, ruleBoxY, cardAreaW, ruleBoxH, 16 * scale);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = themeDark;
+    ctx.font = `800 ${18 * scale}px sans-serif`;
+    ctx.fillText("PETUNJUK PENTING BAGI PESERTA:", contentLeft + 20 * scale, ruleBoxY + 34 * scale);
+
+    ctx.fillStyle = '#334155';
+    ctx.font = `600 ${16 * scale}px sans-serif`;
+    ctx.fillText("1. Pasang nomor BIB di bagian dada depan jersey menggunakan 4 peniti yang disediakan.", contentLeft + 20 * scale, ruleBoxY + 60 * scale);
+    ctx.fillText("2. Pastikan QR Code bersih & tidak terlipat untuk proses scanning di Gerbang Start & Finish.", contentLeft + 20 * scale, ruleBoxY + 80 * scale);
+
+    // 7. Footer Banner (Tagline & Hak Cipta Event)
+    const footerTop = H - 110 * scale;
+    const footerH = 65 * scale;
+    ctx.fillStyle = themeColor;
+    roundRect(ctx, headerLeft, footerTop, headerW, footerH, 14 * scale);
+    ctx.fill();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `900 ${22 * scale}px "Montserrat", sans-serif`;
+    ctx.fillText("★  STRENGTH  •  HONOR  •  BROTHERHOOD  ★  ALPHA CHASE RUN 2026 OFFICIAL  ★", W / 2, footerTop + 40 * scale);
+    ctx.textAlign = 'left'; // reset
+
+    return canvas;
+};
+
+// Helper canvas roundRect
+function roundRect(ctx, x, y, width, height, radius) {
+    if (typeof radius === 'number') {
+        radius = { tl: radius, tr: radius, br: radius, bl: radius };
+    } else {
+        radius = Object.assign({ tl: 0, tr: 0, br: 0, bl: 0 }, radius);
+    }
+    ctx.beginPath();
+    ctx.moveTo(x + radius.tl, y);
+    ctx.lineTo(x + width - radius.tr, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+    ctx.lineTo(x + width, y + height - radius.br);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+    ctx.lineTo(x + radius.bl, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+    ctx.lineTo(x, y + radius.tl);
+    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+    ctx.closePath();
+}
+
+// Download lembar BIB perorangan dalam format PDF Siap Cetak (A5 Landscape)
+window.downloadSingleBibPdf = async function() {
+    const p = getCurrentSelectedBibRunner();
+    if (!p) {
+        window.customAlert("Silakan pilih atau cari peserta terlebih dahulu sebelum mencetak BIB.", "warning", "Peserta Belum Dipilih");
+        return;
+    }
+
+    window.showLoading(true, `Menyiapkan PDF BIB ${p.bibNumber || p.kode}...`);
+    try {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            throw new Error("Library PDF sedang dimuat, mohon tunggu 2 detik.");
+        }
+
+        const canvas = await window.createBibCanvas(p, 1.0);
+        const { jsPDF } = window.jspdf;
+        // A5 Landscape: 210 x 148 mm
+        const doc = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a5',
+            compress: true
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        doc.addImage(imgData, 'JPEG', 0, 0, 210, 148, undefined, 'FAST');
+
+        const cleanBib = String(p.bibNumber || p.kode || 'BIB').replace(/[^a-zA-Z0-9_-]/g, '');
+        const cleanName = String(p.nama || 'Peserta').trim().replace(/[^a-zA-Z0-9]/g, '_');
+        doc.save(`BIB_ACR2026_${cleanBib}_${cleanName}.pdf`);
+
+        window.showLoading(false);
+        window.customAlert(`Lembar BIB resmi ${cleanBib} siap cetak (PDF A5) berhasil diunduh! Berikan file ini ke vendor percetakan atau cetak langsung.`, "success", "Download PDF Berhasil");
+    } catch (err) {
+        window.showLoading(false);
+        window.customAlert("Gagal membuat PDF BIB: " + err.message, "error");
+    }
+};
+
+// Download lembar BIB perorangan dalam format Gambar HD (PNG)
+window.downloadSingleBibImage = async function() {
+    const p = getCurrentSelectedBibRunner();
+    if (!p) {
+        window.customAlert("Silakan pilih atau cari peserta terlebih dahulu sebelum mendownload BIB.", "warning", "Peserta Belum Dipilih");
+        return;
+    }
+
+    window.showLoading(true, `Membuat Gambar HD BIB ${p.bibNumber || p.kode}...`);
+    try {
+        const canvas = await window.createBibCanvas(p, 1.0);
+        const link = document.createElement('a');
+        const cleanBib = String(p.bibNumber || p.kode || 'BIB').replace(/[^a-zA-Z0-9_-]/g, '');
+        const cleanName = String(p.nama || 'Peserta').trim().replace(/[^a-zA-Z0-9]/g, '_');
+        link.download = `BIB_ACR2026_${cleanBib}_${cleanName}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        window.showLoading(false);
+        window.customAlert(`Gambar HD BIB resmi ${cleanBib} (PNG) berhasil diunduh!`, "success", "Download PNG Berhasil");
+    } catch (err) {
+        window.showLoading(false);
+        window.customAlert("Gagal mendownload gambar BIB: " + err.message, "error");
+    }
+};
+
+// =====================================================================
+// KONTROL MODAL & FITUR CETAK BATCH / MASSAL BIB (MULTI-PAGE PDF A5)
+// =====================================================================
+
+window.openBatchBibModal = function() {
+    const modal = document.getElementById('batchBibModal');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+    window.updateBatchBibCount();
+
+    // Reset progress container
+    const pContainer = document.getElementById('batchBibProgressContainer');
+    if (pContainer) pContainer.classList.add('hidden');
+    const pBar = document.getElementById('batchBibProgressBar');
+    if (pBar) pBar.style.width = '0%';
+    const btn = document.getElementById('btnStartBatchPdf');
+    if (btn) btn.disabled = false;
+};
+
+window.closeBatchBibModal = function() {
+    const modal = document.getElementById('batchBibModal');
+    if (modal) modal.classList.add('hidden');
+};
+
+function getFilteredBatchBibRunners() {
+    const catVal = (document.getElementById('batchBibCategory')?.value || 'ALL').toUpperCase();
+    const statusVal = (document.getElementById('batchBibStatus')?.value || 'Verified');
+
+    let list = State.currentMasterList || [];
+
+    // Filter Kategori
+    if (catVal !== 'ALL') {
+        list = list.filter(p => {
+            const k = (p.kategori || '').toLowerCase();
+            if (catVal === 'PELAJAR') return k.includes('pelajar');
+            if (catVal === 'UMUM') return k.includes('umum');
+            if (catVal === 'KIDS') return k.includes('kid');
+            if (catVal === 'FUN') return k.includes('fun');
+            return true;
+        });
+    }
+
+    // Filter Status
+    if (statusVal === 'Verified') {
+        list = list.filter(p => p.status === 'Verified');
+    }
+
+    // Urutkan berdasarkan nomor BIB numerik agar rapi saat dicetak
+    list.sort((a, b) => {
+        const numA = parseInt(String(a.bibNumber || '').replace(/\D/g, '')) || 0;
+        const numB = parseInt(String(b.bibNumber || '').replace(/\D/g, '')) || 0;
+        return numA - numB;
+    });
+
+    return list;
+}
+
+window.updateBatchBibCount = function() {
+    const runners = getFilteredBatchBibRunners();
+    const countEl = document.getElementById('batchBibTargetCount');
+    if (countEl) {
+        countEl.textContent = `${runners.length} Lembar BIB`;
+    }
+};
+
+window.generateBatchBibPdf = async function() {
+    const runners = getFilteredBatchBibRunners();
+    if (!runners || runners.length === 0) {
+        window.customAlert("Tidak ada data peserta yang cocok dengan filter yang dipilih.", "warning");
+        return;
+    }
+
+    const catVal = document.getElementById('batchBibCategory')?.value || 'ALL';
+    const statusVal = document.getElementById('batchBibStatus')?.value || 'Verified';
+
+    const pContainer = document.getElementById('batchBibProgressContainer');
+    const pBar = document.getElementById('batchBibProgressBar');
+    const pText = document.getElementById('batchBibProgressText');
+    const pPercent = document.getElementById('batchBibProgressPercent');
+    const btn = document.getElementById('btnStartBatchPdf');
+
+    if (pContainer) pContainer.classList.remove('hidden');
+    if (btn) btn.disabled = true;
+
+    try {
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            throw new Error("Library PDF belum siap, silakan coba 2 detik lagi.");
+        }
+
+        const { jsPDF } = window.jspdf;
+        // Gunakan jsPDF format A5 landscape (210 x 148 mm)
+        const doc = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a5',
+            compress: true
+        });
+
+        // Untuk batch ekspor, kita gunakan scale 0.8 (1403 x 992 px) agar render super cepat & file PDF ringan tanpa mengurangi ketajaman cetak A5
+        const batchScale = 0.8;
+        const total = runners.length;
+
+        let pagesAdded = 0;
+        for (let i = 0; i < total; i++) {
+            const p = runners[i];
+            const currentNum = i + 1;
+            const pct = Math.round((currentNum / total) * 100);
+
+            if (pBar) pBar.style.width = `${pct}%`;
+            if (pPercent) pPercent.textContent = `${pct}%`;
+            if (pText) pText.textContent = `Membuat BIB ${String(p.bibNumber || p.kode || '-')} (${currentNum}/${total})...`;
+
+            try {
+                // Buat kanvas BIB
+                const cvs = await window.createBibCanvas(p, batchScale);
+                const imgData = cvs.toDataURL('image/jpeg', 0.85);
+
+                if (pagesAdded > 0) {
+                    doc.addPage('a5', 'landscape');
+                }
+                doc.addImage(imgData, 'JPEG', 0, 0, 210, 148, undefined, 'FAST');
+                pagesAdded++;
+            } catch (errOne) {
+                console.warn(`Peringatan: Gagal merender BIB peserta ${p.kode || p.bibNumber}:`, errOne);
+            }
+
+            // Beri nafas event loop browser setiap 3 lembar agar antarmuka tidak freeze
+            if (i % 3 === 0 || i === total - 1) {
+                await new Promise(r => setTimeout(r, 10));
+            }
+        }
+
+        if (pText) pText.textContent = "Mengompresi dan mendownload dokumen PDF...";
+        await new Promise(r => setTimeout(r, 50));
+
+        const nowStr = new Date().toISOString().slice(0, 10);
+        const fileName = `ACR2026_BATCH_BIB_${catVal}_${statusVal}_${total}Runners_${nowStr}.pdf`;
+        doc.save(fileName);
+
+        if (pText) pText.textContent = "Selesai! PDF berhasil diunduh.";
+        if (btn) btn.disabled = false;
+
+        setTimeout(() => {
+            window.closeBatchBibModal();
+            window.customAlert(`Batch PDF (${total} lembar nomor BIB A5) berhasil dibuat & diunduh! Dokumen siap langsung dicetak atau diserahkan ke vendor percetakan.`, "success", "Batch Cetak Berhasil");
+        }, 800);
+
+    } catch (err) {
+        console.error("Batch PDF Error:", err);
+        if (btn) btn.disabled = false;
+        if (pText) pText.textContent = "Terjadi kesalahan.";
+        window.customAlert("Gagal membuat batch PDF: " + err.message, "error");
+    }
+};
+
+// =====================================================================
 // INISIALISASI APLIKASI
 // =====================================================================
 async function initialLoad() {
@@ -2542,3 +3190,495 @@ async function initialLoad() {
 
 // Jalankan inisialisasi saat window dimuat
 window.addEventListener('DOMContentLoaded', initialLoad);
+
+// =====================================================================
+// MODUL: START GATE QR SCANNER & LIVE START MONITOR
+// =====================================================================
+
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+let currentStartGate = 'Gate 1';
+let html5QrScanner = null;
+let isScannerRunning = false;
+let currentFacingMode = "environment";
+let recentGateScans = [];
+let audioCtx = null;
+let startLiveCategoryFilter = 'ALL';
+let liveClockInterval = null;
+
+// Audio Feedback Web Audio API
+function playBeep(isSuccess) {
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (isSuccess) {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.15);
+        } else {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(160, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        if ('vibrate' in navigator) {
+            navigator.vibrate(isSuccess ? [80] : [150, 80, 150]);
+        }
+    } catch (e) {
+        console.warn("Audio Context tidak diizinkan atau belum aktif:", e);
+    }
+}
+
+window.changeStartGate = function(gateVal) {
+    currentStartGate = gateVal || 'Gate 1';
+    const lbl = document.getElementById('lblCurrentGate');
+    if (lbl) lbl.textContent = currentStartGate;
+    renderGateRecentList();
+};
+
+window.initStartGatePage = function() {
+    updateStartGateCounters();
+    renderGateRecentList();
+    window.startStartGateScanner();
+};
+
+window.startStartGateScanner = async function() {
+    const readerEl = document.getElementById('startQrReader');
+    if (!readerEl) return;
+    if (typeof Html5Qrcode === 'undefined') {
+        console.warn("Library Html5Qrcode belum termuat!");
+        return;
+    }
+
+    if (isScannerRunning && html5QrScanner) {
+        return;
+    }
+
+    try {
+        if (!html5QrScanner) {
+            html5QrScanner = new Html5Qrcode("startQrReader");
+        }
+
+        const config = {
+            fps: 15,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+        };
+
+        await html5QrScanner.start(
+            { facingMode: currentFacingMode },
+            config,
+            (decodedText) => {
+                window.handleStartScan(decodedText);
+            },
+            () => {}
+        );
+
+        isScannerRunning = true;
+        const btnTxt = document.getElementById('txtToggleScanner');
+        if (btnTxt) btnTxt.textContent = "Hentikan Kamera";
+    } catch (err) {
+        console.warn("Gagal membuka kamera:", err);
+        isScannerRunning = false;
+        const btnTxt = document.getElementById('txtToggleScanner');
+        if (btnTxt) btnTxt.textContent = "Mulai Kamera";
+        
+        const box = document.getElementById('startScanResultBox');
+        if (box) {
+            box.className = "p-6 rounded-2xl border-2 border-amber-300 bg-amber-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
+            box.innerHTML = `
+                <span class="text-4xl mb-2">📷</span>
+                <h3 class="font-bold text-amber-900 text-base">Kamera Tidak Tersedia</h3>
+                <p class="text-xs text-amber-700 mt-1 max-w-xs">Izin kamera belum diberikan atau perangkat tidak memiliki kamera aktif. Anda tetap dapat menggunakan <strong>Input Manual</strong> di bawah!</p>
+            `;
+        }
+    }
+};
+
+window.stopStartGateScanner = async function() {
+    if (html5QrScanner && isScannerRunning) {
+        try {
+            await html5QrScanner.stop();
+        } catch (e) {
+            console.warn("Error stopping scanner:", e);
+        }
+        isScannerRunning = false;
+        const btnTxt = document.getElementById('txtToggleScanner');
+        if (btnTxt) btnTxt.textContent = "Mulai Kamera";
+    }
+};
+
+window.toggleStartScanner = function() {
+    if (isScannerRunning) {
+        window.stopStartGateScanner();
+    } else {
+        window.startStartGateScanner();
+    }
+};
+
+window.switchStartCamera = async function() {
+    currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+    if (isScannerRunning) {
+        await window.stopStartGateScanner();
+        await window.startStartGateScanner();
+    }
+};
+
+let lastScannedCode = '';
+let lastScannedTime = 0;
+
+window.handleStartScan = async function(rawCode) {
+    if (!rawCode) return;
+    const now = Date.now();
+    const cleanCode = String(rawCode).trim().toUpperCase();
+
+    if (cleanCode === lastScannedCode && (now - lastScannedTime) < 2500) {
+        return;
+    }
+
+    lastScannedCode = cleanCode;
+    lastScannedTime = now;
+
+    await window.processStartScan(cleanCode);
+};
+
+window.submitManualStart = async function(e) {
+    if (e) e.preventDefault();
+    const input = document.getElementById('manualStartInput');
+    if (!input) return;
+    const val = input.value.trim();
+    if (!val) return;
+
+    await window.processStartScan(val);
+    input.value = '';
+    input.focus();
+};
+
+window.processStartScan = async function(inputVal) {
+    const box = document.getElementById('startScanResultBox');
+    const q = String(inputVal).trim().toUpperCase();
+    const qDigits = q.replace(/\D/g, '');
+
+    let p = State.currentMasterList.find(x => {
+        const b = String(x.bibNumber || '').toUpperCase();
+        const k = String(x.kode || '').toUpperCase();
+        const bDigits = b.replace(/\D/g, '');
+
+        return b === q ||
+               k === q ||
+               (qDigits.length >= 3 && (bDigits === qDigits || bDigits.endsWith(qDigits)));
+    });
+
+    if (!p) {
+        playBeep(false);
+        if (box) {
+            box.className = "p-6 rounded-2xl border-2 border-red-400 bg-red-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
+            box.innerHTML = `
+                <span class="text-4xl mb-2">❌</span>
+                <h3 class="font-black text-red-700 text-lg">PESERTA TIDAK DITEMUKAN!</h3>
+                <p class="text-xs text-red-600 mt-1">Kode / BIB "<strong>${escapeHtml(inputVal)}</strong>" tidak ada di sistem.</p>
+            `;
+        }
+        return;
+    }
+
+    if (p.status !== 'Verified') {
+        playBeep(false);
+        if (box) {
+            box.className = "p-6 rounded-2xl border-2 border-yellow-400 bg-yellow-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
+            box.innerHTML = `
+                <span class="text-4xl mb-2">⚠️</span>
+                <h3 class="font-black text-yellow-800 text-lg">BELUM DIVERIFIKASI!</h3>
+                <p class="text-xs text-yellow-700 mt-1">Peserta <strong>${escapeHtml(p.nama)}</strong> (${escapeHtml(p.bibNumber || p.kode)}) berstatus <em>${escapeHtml(p.status)}</em>.</p>
+            `;
+        }
+        return;
+    }
+
+    if (p.started === true || p.started === 'true' || p.started === 'TRUE') {
+        playBeep(false);
+        const timeStr = p.startedAt ? (typeof p.startedAt === 'number' ? new Date(p.startedAt).toLocaleTimeString('id-ID') : String(p.startedAt)) : '-';
+        if (box) {
+            box.className = "p-6 rounded-2xl border-2 border-amber-400 bg-amber-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
+            box.innerHTML = `
+                <span class="text-4xl mb-2">⛔</span>
+                <h3 class="font-black text-amber-900 text-lg">SUDAH MELAKUKAN START!</h3>
+                <p class="text-xs sm:text-sm text-amber-800 mt-1">
+                    <strong>${escapeHtml(p.nama)}</strong> (${escapeHtml(p.bibNumber || p.kode)})<br>
+                    Telah melintasi <strong>${escapeHtml(p.startGate || 'Gate')}</strong> pada pukul <strong class="text-amber-950 font-mono text-base">${escapeHtml(timeStr)}</strong>
+                </p>
+                <span class="mt-3 px-3 py-1 bg-amber-200/80 text-amber-900 text-[11px] font-bold rounded-full">Anti-Duplicate Protection</span>
+            `;
+        }
+        return;
+    }
+
+    // Sukses Start!
+    const scanTimestamp = Date.now();
+    const scanDate = new Date(scanTimestamp);
+    const timeFormatted = `${String(scanDate.getHours()).padStart(2, '0')}:${String(scanDate.getMinutes()).padStart(2, '0')}:${String(scanDate.getSeconds()).padStart(2, '0')}`;
+    const gateUsed = currentStartGate;
+
+    p.started = true;
+    p.startedAt = scanTimestamp;
+    p.startGate = gateUsed;
+
+    playBeep(true);
+
+    if (box) {
+        box.className = "p-6 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300 shadow-md";
+        box.innerHTML = `
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 text-white rounded-full text-xs font-black mb-2 shadow">
+                <span>✓ BERHASIL START</span> • <span>${escapeHtml(gateUsed)}</span>
+            </div>
+            <div class="font-mono text-3xl sm:text-4xl font-black text-emerald-800 tracking-tight my-1">
+                ${escapeHtml(p.bibNumber || p.kode)}
+            </div>
+            <h3 class="font-black text-slate-900 text-lg sm:text-xl uppercase leading-snug">
+                ${escapeHtml(p.nama)}
+            </h3>
+            <p class="text-xs text-slate-600 font-bold mt-1">
+                ${escapeHtml((p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim())} • <span class="font-mono text-emerald-700">${escapeHtml(timeFormatted)} WIB</span>
+            </p>
+        `;
+    }
+
+    recentGateScans.unshift({
+        kode: p.kode,
+        bibNumber: p.bibNumber,
+        nama: p.nama,
+        kategori: p.kategori,
+        gate: gateUsed,
+        time: timeFormatted
+    });
+    if (recentGateScans.length > 30) recentGateScans.pop();
+    renderGateRecentList();
+    updateStartGateCounters();
+
+    try {
+        await updatePeserta(p.kode, {
+            started: true,
+            startedAt: scanTimestamp,
+            startGate: gateUsed
+        });
+    } catch (err) {
+        console.error("Gagal update status start ke Firestore:", err);
+    }
+};
+
+function renderGateRecentList() {
+    const listEl = document.getElementById('gateRecentList');
+    if (!listEl) return;
+
+    if (recentGateScans.length === 0) {
+        listEl.innerHTML = '<div class="text-center py-4 text-xs text-slate-400">Belum ada peserta di-scan pada sesi ini.</div>';
+        return;
+    }
+
+    const rows = recentGateScans.map(item => `
+        <div class="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between shadow-xs">
+            <div class="flex items-center gap-2">
+                <span class="font-mono font-black text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">${escapeHtml(item.bibNumber || '-')}</span>
+                <div>
+                    <span class="font-bold text-slate-800 text-xs block leading-tight truncate max-w-[140px] sm:max-w-[180px]">${escapeHtml(item.nama)}</span>
+                    <span class="text-[10px] text-slate-400">${escapeHtml((item.kategori || '').replace(/\s*\([^)]*\)/g, '').trim())}</span>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="font-mono text-[11px] font-bold text-emerald-600 block">${escapeHtml(item.time)}</span>
+                <span class="text-[9px] font-bold text-slate-400">${escapeHtml(item.gate)}</span>
+            </div>
+        </div>
+    `);
+
+    listEl.innerHTML = rows.join('');
+    const timeEl = document.getElementById('gateScanTime');
+    if (timeEl && recentGateScans.length > 0) {
+        timeEl.textContent = recentGateScans[0].time;
+    }
+}
+
+function updateStartGateCounters() {
+    const totalPeserta = State.currentMasterList.length;
+    const totalStarted = State.currentMasterList.filter(p => p.started === true || p.started === 'true').length;
+
+    const thisGateCountEl = document.getElementById('thisGateCount');
+    const totalStartedEl = document.getElementById('totalStartedCount');
+
+    if (thisGateCountEl) thisGateCountEl.textContent = recentGateScans.length;
+    if (totalStartedEl) totalStartedEl.textContent = `${totalStarted} / ${totalPeserta}`;
+}
+
+// =====================================================================
+// MODUL: START LIVE MONITOR
+// =====================================================================
+
+window.initStartLivePage = function() {
+    if (!liveClockInterval) {
+        liveClockInterval = setInterval(updateLiveClock, 1000);
+        updateLiveClock();
+    }
+    updateStartLiveCounters();
+    renderStartLiveFeed();
+};
+
+function updateLiveClock() {
+    const clockEl = document.getElementById('liveClockDisplay');
+    if (!clockEl) return;
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    clockEl.textContent = `${h}:${m}:${s}`;
+}
+
+window.filterStartLive = function(catKey, btnEl) {
+    startLiveCategoryFilter = catKey || 'ALL';
+    document.querySelectorAll('.start-live-cat-btn').forEach(b => {
+        b.classList.remove('bg-slate-900', 'text-white');
+        b.classList.add('bg-slate-100', 'text-slate-700');
+    });
+    if (btnEl) {
+        btnEl.classList.remove('bg-slate-100', 'text-slate-700');
+        btnEl.classList.add('bg-slate-900', 'text-white');
+    }
+    renderStartLiveFeed();
+};
+
+window.updateStartLiveCounters = function() {
+    const total = State.currentMasterList.length;
+    const started = State.currentMasterList.filter(p => p.started === true || p.started === 'true').length;
+    const remaining = Math.max(0, total - started);
+    const percent = total > 0 ? Math.round((started / total) * 100) : 0;
+
+    const totalEl = document.getElementById('liveTotalRunners');
+    const startedEl = document.getElementById('liveStartedRunners');
+    const percentEl = document.getElementById('liveStartedPercent');
+    const remEl = document.getElementById('liveRemainingRunners');
+
+    if (totalEl) totalEl.textContent = total;
+    if (startedEl) startedEl.textContent = started;
+    if (percentEl) percentEl.textContent = `(${percent}%)`;
+    if (remEl) remEl.textContent = remaining;
+};
+
+window.renderStartLiveFeed = function() {
+    const tbody = document.getElementById('startLiveTableBody');
+    const countBadge = document.getElementById('startLiveTableCount');
+    if (!tbody) return;
+
+    const searchInput = document.getElementById('searchStartLive');
+    const keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    let startedList = State.currentMasterList.filter(p => p.started === true || p.started === 'true');
+
+    if (startLiveCategoryFilter !== 'ALL') {
+        startedList = startedList.filter(p => {
+            const kat = String(p.kategori || '').toUpperCase();
+            return kat.includes(startLiveCategoryFilter);
+        });
+    }
+
+    if (keyword) {
+        startedList = startedList.filter(p => {
+            const nama = String(p.nama || '').toLowerCase();
+            const bib = String(p.bibNumber || '').toLowerCase();
+            const gate = String(p.startGate || '').toLowerCase();
+            return nama.includes(keyword) || bib.includes(keyword) || gate.includes(keyword);
+        });
+    }
+
+    startedList.sort((a, b) => {
+        const timeA = typeof a.startedAt === 'number' ? a.startedAt : new Date(a.startedAt || 0).getTime();
+        const timeB = typeof b.startedAt === 'number' ? b.startedAt : new Date(b.startedAt || 0).getTime();
+        return timeB - timeA;
+    });
+
+    if (countBadge) {
+        countBadge.textContent = `${startedList.length} pelari`;
+    }
+
+    if (startedList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-slate-400">Belum ada pelari yang melintasi gerbang start sesuai filter ini.</td></tr>';
+        return;
+    }
+
+    const rows = startedList.map((p, idx) => {
+        let timeStr = '-';
+        if (p.startedAt) {
+            const d = typeof p.startedAt === 'number' ? new Date(p.startedAt) : new Date(p.startedAt);
+            if (!isNaN(d.getTime())) {
+                timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+            } else {
+                timeStr = String(p.startedAt);
+            }
+        }
+
+        const cleanKat = (p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim();
+
+        return `
+            <tr class="hover:bg-purple-50/50 transition">
+                <td class="py-3.5 px-4 text-center font-bold text-slate-400 text-xs">${idx + 1}</td>
+                <td class="py-3.5 px-4 font-mono font-bold text-emerald-700">${escapeHtml(timeStr)} <span class="text-[10px] text-slate-400">WIB</span></td>
+                <td class="py-3.5 px-4">
+                    <span class="font-mono font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100 text-xs">${escapeHtml(p.bibNumber || '-')}</span>
+                </td>
+                <td class="py-3.5 px-4 font-bold text-slate-900 uppercase">${escapeHtml(p.nama)}</td>
+                <td class="py-3.5 px-4 text-slate-600 font-medium text-xs">${escapeHtml(cleanKat)}</td>
+                <td class="py-3.5 px-4 text-center">
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">${escapeHtml(p.startGate || 'Gate 1')}</span>
+                </td>
+                <td class="py-3.5 px-4 text-center">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
+                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                        <span>Di Jalur Lomba</span>
+                    </span>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = rows.join('');
+};
+
+window.toggleStartFullscreen = function() {
+    const elem = document.getElementById('page-startlive');
+    if (!elem) return;
+
+    if (!document.fullscreenElement) {
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+};
