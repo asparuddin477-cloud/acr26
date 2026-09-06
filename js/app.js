@@ -2384,23 +2384,79 @@ window.handleBibSearchInput = function(query) {
         return;
     }
 
-    const rows = matches.map(p => `
-        <div onclick="showBibScreen('${p.kode}')" class="p-3 sm:p-4 hover:bg-indigo-50 cursor-pointer transition flex justify-between items-center group">
-            <div>
-                <div class="font-bold text-slate-800 text-sm group-hover:text-indigo-600 uppercase">${p.nama}</div>
-                <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-                    <span>${(p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim()}</span>
-                    <span class="text-slate-300">•</span>
-                    <span class="font-mono text-blue-600 font-bold">BIB: ${p.bibNumber || 'Belum ada BIB'}</span>
-                    <span class="text-slate-300">•</span>
-                    <span class="font-mono text-slate-400">${p.kode}</span>
+    const rows = matches.map(p => {
+        const isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
+        const isVerified = p.status === 'Verified';
+
+        if (!isVerified) {
+            return `
+                <div onclick="showBibScreen('${p.kode}')" class="p-3 sm:p-4 hover:bg-red-50/60 cursor-pointer transition flex justify-between items-center group">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-700 text-sm uppercase">${escapeHtml(p.nama)}</span>
+                            <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold border border-red-200">❌ Belum Lunas / Verified</span>
+                        </div>
+                        <div class="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                            <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
+                            <span class="text-slate-300">•</span>
+                            <span class="font-mono text-slate-400">Status: ${escapeHtml(p.status)}</span>
+                        </div>
+                    </div>
+                    <span class="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold flex items-center gap-1">
+                        <span>🔒 Terkunci</span>
+                    </span>
                 </div>
+            `;
+        }
+
+        if (!isCheckedIn) {
+            return `
+                <div onclick="showBibScreen('${p.kode}')" class="p-3 sm:p-4 hover:bg-amber-50/70 cursor-pointer transition flex justify-between items-center group">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-800 text-sm group-hover:text-amber-700 uppercase">${escapeHtml(p.nama)}</span>
+                            <span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold border border-amber-200 flex items-center gap-1">
+                                <span>🔒 Belum Check-In</span>
+                            </span>
+                        </div>
+                        <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                            <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
+                            <span class="text-slate-300">•</span>
+                            <span class="font-mono text-amber-700 font-bold">BIB: Terkunci (Ambil di Meja Check-In)</span>
+                            <span class="text-slate-300">•</span>
+                            <span class="font-mono text-slate-400">${escapeHtml(p.kode)}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="px-3 py-1.5 bg-amber-500 group-hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1">
+                        <span>🔒 Terkunci</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        return `
+            <div onclick="showBibScreen('${p.kode}')" class="p-3 sm:p-4 hover:bg-indigo-50 cursor-pointer transition flex justify-between items-center group">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-slate-800 text-sm group-hover:text-indigo-600 uppercase">${escapeHtml(p.nama)}</span>
+                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                            <span>✅ Sudah Check-In</span>
+                        </span>
+                    </div>
+                    <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                        <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
+                        <span class="text-slate-300">•</span>
+                        <span class="font-mono text-blue-600 font-bold">BIB: ${escapeHtml(p.bibNumber || 'Sudah Ada')}</span>
+                        <span class="text-slate-300">•</span>
+                        <span class="font-mono text-slate-400">${escapeHtml(p.kode)}</span>
+                    </div>
+                </div>
+                <button type="button" class="px-3 py-1.5 bg-indigo-600 group-hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1">
+                    <span>Pilih</span> 📸
+                </button>
             </div>
-            <button type="button" class="px-3 py-1 bg-indigo-600 group-hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1">
-                <span>Pilih</span> 📸
-            </button>
-        </div>
-    `);
+        `;
+    });
 
     resBox.innerHTML = rows.join('');
     resBox.classList.remove('hidden');
@@ -2442,12 +2498,61 @@ window.submitBibSearch = function() {
 window.showBibScreen = function(kode) {
     const p = State.currentMasterList.find(x => x.kode === kode);
     if (!p) return;
-    State.currentBibPeserta = p;
-    window.currentSelectedBibRunner = p;
 
-    // Sembunyikan dropdown hasil
+    // Sembunyikan dropdown hasil pencarian
     const resBox = document.getElementById('bibSearchResults');
     if (resBox) resBox.classList.add('hidden');
+
+    // Validasi 1: Status Pembayaran / Verifikasi
+    if (p.status !== 'Verified') {
+        window.customAlert(
+            `<div class="text-center py-2">
+                <div class="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 uppercase">${escapeHtml(p.nama)}</h3>
+                <p class="text-xs text-red-600 font-bold mt-1">Status: ${escapeHtml(p.status)}</p>
+                <p class="text-xs text-slate-600 mt-2">Pendaftaran Anda belum diverifikasi atau belum lunas. Nomor BIB masih terkunci.</p>
+            </div>`,
+            "error",
+            "Pendaftaran Belum Verified"
+        );
+        return;
+    }
+
+    // Validasi 2: Status Check-In (Race Pack Collection)
+    const isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
+    if (!isCheckedIn) {
+        window.customAlert(
+            `<div class="text-center py-2">
+                <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </div>
+                <h3 class="text-base font-black text-slate-900 uppercase">${escapeHtml(p.nama)}</h3>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold my-2 border border-amber-200">
+                    <span>🔒 BIB BELUM DI-CHECK IN</span>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
+                    Layar BIB resmi & Photo Booth <strong>hanya dapat dibuka</strong> untuk peserta yang sudah melakukan <strong>Check-In / Pengambilan Race Pack</strong> di lokasi lomba.
+                </p>
+                <div class="mt-4 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 text-left">
+                    <p class="font-bold text-slate-800 mb-1 flex items-center gap-1"><span>📍</span> Petunjuk untuk Pelari:</p>
+                    <ol class="list-decimal pl-4 space-y-1 text-slate-500">
+                        <li>Kunjungi loket Race Pack Collection panitia di venue.</li>
+                        <li>Tunjukkan Kode Pendaftaran: <strong class="font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">${escapeHtml(p.kode)}</strong>.</li>
+                        <li>Setelah panitia memproses check-in, layar BIB dan nomor BIB resmi Anda akan otomatis aktif!</li>
+                    </ol>
+                </div>
+            </div>`,
+            "warning",
+            "Layar BIB Masih Terkunci"
+        );
+        return;
+    }
+
+    // Jika sudah check in resmi, tampilkan layar BIB & Photo Booth
+    State.currentBibPeserta = p;
+    window.currentSelectedBibRunner = p;
 
     // Bersihkan nominal rupiah, contoh "5K Pelajar (Rp 175.000)" -> "5K PELAJAR"
     let rawKat = String(p.kategori || '5K Pelajar').replace(/\s*\([^)]*\)/g, '').trim();
@@ -2467,13 +2572,8 @@ window.showBibScreen = function(kode) {
 
     const statusBadge = document.getElementById('dispBibStatusBadge');
     if (statusBadge) {
-        if (p.status === 'Verified') {
-            statusBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 flex items-center gap-1";
-            statusBadge.innerHTML = "<span>✅ Verified / Siap Lomba</span>";
-        } else {
-            statusBadge.className = "px-3 py-1 bg-yellow-100 text-yellow-800 rounded-lg border border-yellow-200 flex items-center gap-1";
-            statusBadge.innerHTML = `<span>⏳ ${p.status}</span>`;
-        }
+        statusBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 flex items-center gap-1";
+        statusBadge.innerHTML = "<span>✅ Verified & Checked-In</span>";
     }
 
     const qrEl = document.getElementById('dispBibQrCode');
@@ -2562,20 +2662,25 @@ window.downloadBibPoster = async function() {
 // =====================================================================
 
 function getCurrentSelectedBibRunner() {
-    if (window.currentSelectedBibRunner) return window.currentSelectedBibRunner;
-    if (State.currentBibPeserta) return State.currentBibPeserta;
-    const kodeEl = document.getElementById('dispBibKode');
-    if (kodeEl && kodeEl.textContent) {
-        const p = State.currentMasterList.find(x => x.kode === kodeEl.textContent.trim());
-        if (p) return p;
+    let p = window.currentSelectedBibRunner || State.currentBibPeserta;
+    if (!p) {
+        const kodeEl = document.getElementById('dispBibKode');
+        if (kodeEl && kodeEl.textContent) {
+            p = State.currentMasterList.find(x => x.kode === kodeEl.textContent.trim());
+        }
     }
-    const bibEl = document.getElementById('dispBibNumber');
-    if (bibEl && bibEl.textContent) {
-        const b = bibEl.textContent.trim();
-        const p = State.currentMasterList.find(x => x.bibNumber === b);
-        if (p) return p;
+    if (!p) {
+        const bibEl = document.getElementById('dispBibNumber');
+        if (bibEl && bibEl.textContent) {
+            const b = bibEl.textContent.trim();
+            p = State.currentMasterList.find(x => x.bibNumber === b);
+        }
     }
-    return null;
+    if (p) {
+        const isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
+        if (!isCheckedIn || p.status !== 'Verified') return null;
+    }
+    return p;
 }
 
 // Helper untuk generate QR Code element offline menggunakan QRCode.js
@@ -3682,3 +3787,63 @@ window.toggleStartFullscreen = function() {
         }
     }
 };
+
+// Reset Seluruh Data Pelari yang Sudah Start (Admin / Panitia)
+window.resetAllStartGateData = async function() {
+    const startedRunners = State.currentMasterList.filter(p => p.started === true || p.started === 'true' || p.started === 'TRUE');
+    
+    if (startedRunners.length === 0) {
+        window.customAlert("Saat ini belum ada pelari yang melintasi garis start (data monitor sudah bersih / 0 pelari start).", "info", "Data Sudah Bersih");
+        return;
+    }
+
+    const confirmReset = await window.customConfirm(
+        `<div class="text-left space-y-2">
+            <p>Anda akan mereset <strong>${startedRunners.length} peserta</strong> yang saat ini tercatat sudah melintasi garis start.</p>
+            <p class="text-xs text-rose-600 font-bold">Semua pelari tersebut akan dikembalikan ke status "Belum Start" (Waktu start & Gate akan dikosongkan).</p>
+            <p class="text-xs text-slate-500">Profil pendaftaran, nomor BIB, dan status check-in peserta TIDAK akan terhapus.</p>
+            <p class="text-xs font-bold text-slate-700 mt-2">Apakah Anda yakin ingin melanjutkan reset?</p>
+        </div>`,
+        "Konfirmasi Reset Start Gate"
+    );
+
+    if (!confirmReset) return;
+
+    window.showLoading(true, "Mereset data start pelari di Firebase...");
+
+    try {
+        const db = getDb();
+        const updatePromises = startedRunners.map(async (p) => {
+            p.started = false;
+            p.startedAt = null;
+            p.startGate = "";
+            if (db) {
+                return db.collection('peserta').doc(p.kode).set({
+                    started: false,
+                    startedAt: null,
+                    startGate: ""
+                }, { merge: true });
+            }
+        });
+
+        await Promise.all(updatePromises);
+
+        recentGateScans = [];
+        renderGateRecentList();
+        updateStartGateCounters();
+        renderStartLiveFeed();
+        updateStartLiveCounters();
+
+        window.showLoading(false);
+        window.customAlert(
+            `Berhasil! Seluruh data Start Gate telah dibersihkan (${startedRunners.length} peserta di-reset ke status Belum Start).`,
+            "success",
+            "Reset Selesai"
+        );
+    } catch (err) {
+        window.showLoading(false);
+        console.error("Gagal mereset data start:", err);
+        window.customAlert("Gagal mereset data start: " + err.message, "error");
+    }
+};
+

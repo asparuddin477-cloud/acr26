@@ -386,9 +386,13 @@
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </div>
                 <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-1">BIB Check & Photo Booth</h2>
-                <p class="text-slate-500 text-xs sm:text-sm max-w-md mx-auto mb-6">
+                <p class="text-slate-500 text-xs sm:text-sm max-w-md mx-auto mb-3">
                     Ketik nama, nomor BIB, atau kode pendaftaran untuk memunculkan layar BIB resmi Alpha Chase Run dan berfoto di booth Race Pack!
                 </p>
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-xs font-bold text-amber-800 mb-6 shadow-xs">
+                    <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span>Layar BIB Terkunci: Hanya peserta yang <u>sudah Check-In / Ambil Race Pack</u> yang dapat membuka BIB.</span>
+                </div>
 
                 <!-- Search Input with Live Suggestions -->
                 <div class="relative max-w-xl mx-auto">
@@ -542,21 +546,26 @@
                         <p class="text-xs sm:text-sm text-slate-500 mt-1">Arahkan kamera ke QR Code BIB peserta untuk verifikasi start resmi.</p>
                     </div>
 
-                    <!-- Gate Selection Dropdown -->
-                    <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200">
-                        <label for="startGateSelector" class="text-xs font-bold text-slate-600 pl-2">Jalur:</label>
-                        <select id="startGateSelector" onchange="changeStartGate(this.value)" class="bg-purple-600 text-white font-black text-sm px-3.5 py-2 rounded-xl outline-none cursor-pointer shadow-sm">
-                            <option value="Gate 1" selected>Gate 1</option>
-                            <option value="Gate 2">Gate 2</option>
-                            <option value="Gate 3">Gate 3</option>
-                            <option value="Gate 4">Gate 4</option>
-                            <option value="Gate 5">Gate 5</option>
-                            <option value="Gate 6">Gate 6</option>
-                            <option value="Gate 7">Gate 7</option>
-                            <option value="Gate 8">Gate 8</option>
-                            <option value="Gate 9">Gate 9</option>
-                            <option value="Gate 10">Gate 10</option>
-                        </select>
+                    <!-- Gate Selection Dropdown & Reset Action -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200">
+                            <label for="startGateSelector" class="text-xs font-bold text-slate-600 pl-2">Jalur:</label>
+                            <select id="startGateSelector" onchange="changeStartGate(this.value)" class="bg-purple-600 text-white font-black text-sm px-3.5 py-2 rounded-xl outline-none cursor-pointer shadow-sm">
+                                <option value="Gate 1" selected>Gate 1</option>
+                                <option value="Gate 2">Gate 2</option>
+                                <option value="Gate 3">Gate 3</option>
+                                <option value="Gate 4">Gate 4</option>
+                                <option value="Gate 5">Gate 5</option>
+                                <option value="Gate 6">Gate 6</option>
+                                <option value="Gate 7">Gate 7</option>
+                                <option value="Gate 8">Gate 8</option>
+                                <option value="Gate 9">Gate 9</option>
+                                <option value="Gate 10">Gate 10</option>
+                            </select>
+                        </div>
+                        <button type="button" onclick="resetAllStartGateData()" class="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl text-xs font-bold transition active:scale-95 flex items-center gap-1.5 shadow-xs" title="Reset/Hapus status peserta yang sudah start">
+                            <span>🗑️ Reset Data Start</span>
+                        </button>
                     </div>
                 </div>
 
@@ -699,10 +708,13 @@
                     <button type="button" onclick="filterStartLive('FUN', this)" class="start-live-cat-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">5K Fun Run</button>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                     <input type="text" id="searchStartLive" oninput="renderStartLiveFeed()" placeholder="Cari nama / BIB / Gate..." class="px-3 py-2 border rounded-xl text-xs outline-none focus:border-indigo-500 bg-slate-50">
-                    <button type="button" onclick="toggleStartFullscreen()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm">
+                    <button type="button" onclick="toggleStartFullscreen()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition active:scale-95">
                         <span>🖥️ Layar Penuh</span>
+                    </button>
+                    <button type="button" onclick="resetAllStartGateData()" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition active:scale-95" title="Reset status seluruh peserta yang sudah start">
+                        <span>🗑️ Reset Data Start</span>
                     </button>
                 </div>
             </div>
