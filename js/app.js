@@ -200,18 +200,46 @@ async function addPeserta(payload) {
     }
 }
 
-// Update Peserta di Firestore
+// Helper Cek Verifikasi & Check-In yang Handal (Multi-Format)
+window.isPesertaVerified = function(p) {
+    if (!p) return false;
+    const st = String(p.status || '').trim().toLowerCase();
+    return st === 'verified' || st === 'terverifikasi' || st === 'lunas' || st === 'sudah bayar' || st === 'sukses';
+};
+
+window.isPesertaCheckedIn = function(p) {
+    if (!p) return false;
+    if (p.checkedIn === true || p.checkedIn === 'true' || p.checkedIn === 'TRUE' || p.checkedIn === 1 || p.checkedIn === '1') {
+        return true;
+    }
+    if (p.kodeLogistik && typeof p.kodeLogistik === 'string' && p.kodeLogistik.trim() !== '') {
+        return true;
+    }
+    if (p.logistikDiambil && typeof p.logistikDiambil === 'string' && p.logistikDiambil.trim() !== '') {
+        return true;
+    }
+    if (p.statusCheckin === 'Hadir' || p.hadir === true || p.hadir === 'true') {
+        return true;
+    }
+    return false;
+};
+
+// Update Peserta di Firestore & State Lokal Seketika
 async function updatePeserta(kode, updateFields) {
+    const idx = State.currentMasterList.findIndex(p => p.kode === kode);
+    if (idx !== -1) {
+        State.currentMasterList[idx] = Object.assign({}, State.currentMasterList[idx], updateFields);
+        saveLocalFallbackData();
+    }
     const db = getDb();
     if (db) {
-        await db.collection('peserta').doc(kode).set(updateFields, { merge: true });
-    } else {
-        const idx = State.currentMasterList.findIndex(p => p.kode === kode);
-        if (idx !== -1) {
-            State.currentMasterList[idx] = Object.assign({}, State.currentMasterList[idx], updateFields);
-            saveLocalFallbackData();
-            refreshActivePageUI();
+        try {
+            await db.collection('peserta').doc(kode).set(updateFields, { merge: true });
+        } catch(err) {
+            console.warn("Update Firestore gagal, data lokal tetap terupdate:", err);
         }
+    } else {
+        refreshActivePageUI();
     }
 }
 
@@ -1073,9 +1101,9 @@ document.getElementById('formStatus').addEventListener('submit', async function(
         else if(p.status === 'Menunggu Verifikasi') badge.className += "bg-yellow-100 text-yellow-700";
         else badge.className += "bg-emerald-100 text-emerald-700";
         
-        if(p.status === 'Verified') {
+        if(window.isPesertaVerified(p)) {
             bibBox.classList.remove('hidden');
-            let isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
+            let isCheckedIn = window.isPesertaCheckedIn(p);
             if (isCheckedIn && p.bibNumber) {
                 document.getElementById('resBib').textContent = p.bibNumber;
                 document.getElementById('resBibName').textContent = p.bibName;
@@ -1119,10 +1147,11 @@ window.renderPublicParticipants = function() {
     
     const rows = [];
     list.forEach(p => {
-        let isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
+        let isCheckedIn = window.isPesertaCheckedIn(p);
+        let isVerified = window.isPesertaVerified(p);
         let statusBadge = '';
-        if (p.status === 'Verified' && isCheckedIn && p.bibNumber) statusBadge = `<span class="font-bold text-blue-600 text-sm">${p.bibNumber}</span>`;
-        else if (p.status === 'Verified') statusBadge = `<span class="text-[10px] px-2 py-1 rounded-md bg-emerald-100 text-emerald-700">Verified</span>`;
+        if (isVerified && isCheckedIn && p.bibNumber) statusBadge = `<span class="font-bold text-blue-600 text-sm">${p.bibNumber}</span>`;
+        else if (isVerified) statusBadge = `<span class="text-[10px] px-2 py-1 rounded-md bg-emerald-100 text-emerald-700">Verified</span>`;
         else statusBadge = `<span class="text-[10px] px-2 py-1 rounded-md bg-slate-100 text-slate-500">Pending</span>`;
         
         rows.push(`
@@ -1185,7 +1214,7 @@ window.updateDashboardCounters = function() {
     list.forEach(p => {
         if(p.status === 'Menunggu Pembayaran') unpaid++;
         else if(p.status === 'Menunggu Verifikasi') pending++;
-        else if(p.status === 'Verified') verified++;
+        else if(window.isPesertaVerified(p)) verified++;
     });
 
     const totalEl = document.getElementById('dashTotal');
@@ -1215,7 +1244,7 @@ window.renderAdminHistory = function() {
     const displayList = kw === '' ? filtered.slice(0, 50) : filtered.slice(0, 100);
     const rows = [];
     displayList.forEach(p => {
-        let color = p.status === 'Verified' ? 'text-emerald-600 bg-emerald-50' : (p.status === 'Menunggu Verifikasi' ? 'text-yellow-600 bg-yellow-50' : 'text-slate-500 bg-slate-100');
+        let color = window.isPesertaVerified(p) ? 'text-emerald-600 bg-emerald-50' : (p.status === 'Menunggu Verifikasi' ? 'text-yellow-600 bg-yellow-50' : 'text-slate-500 bg-slate-100');
         rows.push(`
             <div class="flex justify-between items-center p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition">
                 <div>
@@ -1257,20 +1286,20 @@ window.renderMasterTable = function() {
 
         if(p.status === 'Menunggu Verifikasi') {
             btnHTML += `<button onclick="openVerifyModal('${p.kode}', 'verify')" class="bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm hover:bg-blue-700 active:scale-95">Verifikasi</button>`;
-        } else if(p.status === 'Verified') {
+        } else if(window.isPesertaVerified(p)) {
             btnHTML += `<button onclick="cancelVerifikasi('${p.kode}')" class="bg-yellow-500 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm hover:bg-yellow-600 active:scale-95">Batal Verif</button>`;
         }
 
         btnHTML += `<button onclick="deletePeserta('${p.kode}')" class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm hover:bg-red-600 active:scale-95">Hapus</button></div>`;
         
-        let isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
+        let isCheckedIn = window.isPesertaCheckedIn(p);
         let checkInIndicator = isCheckedIn ? '<br><span class="text-[9px] text-emerald-600">✅ Hadir</span>' : '';
         
         let idHTML = p.bibNumber 
             ? `<span class="font-bold text-blue-600 text-sm">${p.bibNumber}</span>${checkInIndicator}` 
             : `<span class="font-mono text-xs text-slate-600">${p.kode}</span>`;
         
-        let statusClass = p.status === 'Verified' ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-slate-500 border-slate-200';
+        let statusClass = window.isPesertaVerified(p) ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-slate-500 border-slate-200';
 
         rows.push(`
             <tr class="border-b border-slate-100 hover:bg-slate-50">
@@ -1647,7 +1676,7 @@ window.exportToPDF = async function() {
         const tableData = filteredList.map((p, i) => [
             i + 1, p.kode, p.bibNumber || '-', p.bibName || '-', p.nama,
             p.gender === 'L' ? 'Laki-laki' : 'Perempuan', p.wa || '-', p.kategori,
-            p.jersey || '-', p.status, (p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true') ? 'Hadir' : '-'
+            p.jersey || '-', p.status, (window.isPesertaCheckedIn(p)) ? 'Hadir' : '-'
         ]);
 
         doc.autoTable({
@@ -1681,12 +1710,12 @@ document.getElementById('formCheckin').addEventListener('submit', async function
         return;
     }
 
-    if (p.status !== 'Verified') {
+    if (!window.isPesertaVerified(p)) {
         await window.customAlert(`Peserta <strong>${p.nama}</strong> (${p.kode}) belum diverifikasi pembayarannya.<br>Harap verifikasi terlebih dahulu di menu Master.`, "warning", "Belum Diverifikasi");
         return;
     }
 
-    const isAlreadyChecked = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true' || (p.kodeLogistik && p.kodeLogistik.trim() !== '');
+    const isAlreadyChecked = window.isPesertaCheckedIn(p);
 
     if (isAlreadyChecked && p.kodeLogistik) {
         // Jika sudah pernah check-in, gunakan kode logistik yang sama (tidak boleh buat kode baru/dobel!)
@@ -1749,7 +1778,7 @@ window.renderCheckinHistory = function() {
     const container = document.getElementById('checkinHistoryList');
     if(!container) return;
     
-    const list = State.currentMasterList.filter(p => p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true');
+    const list = State.currentMasterList.filter(p => window.isPesertaCheckedIn(p));
     list.sort((a, b) => {
         let numA = parseInt((a.kodeLogistik || '0').replace(/\D/g, '')) || 0;
         let numB = parseInt((b.kodeLogistik || '0').replace(/\D/g, '')) || 0;
@@ -2495,10 +2524,10 @@ window.handleBibSearchInput = function(query) {
     }
 
     const rows = matches.map(p => {
-        const isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
-        const isVerified = p.status === 'Verified';
+        const isCheckedIn = window.isPesertaCheckedIn(p);
+        const isVerified = window.isPesertaVerified(p);
 
-        if (!isVerified) {
+        if (!isCheckedIn && !isVerified) {
             return `
                 <div onclick="showBibScreen('${p.kode}')" class="p-3 sm:p-4 hover:bg-red-50/60 cursor-pointer transition flex justify-between items-center group">
                     <div>
@@ -2509,7 +2538,7 @@ window.handleBibSearchInput = function(query) {
                         <div class="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
                             <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
                             <span class="text-slate-300">•</span>
-                            <span class="font-mono text-slate-400">Status: ${escapeHtml(p.status)}</span>
+                            <span class="font-mono text-slate-400">Status: ${escapeHtml(p.status || '-')}</span>
                         </div>
                     </div>
                     <span class="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold flex items-center gap-1">
@@ -2613,26 +2642,26 @@ window.showBibScreen = function(kode) {
     const resBox = document.getElementById('bibSearchResults');
     if (resBox) resBox.classList.add('hidden');
 
-    // Validasi 1: Status Pembayaran / Verifikasi
-    if (p.status !== 'Verified') {
-        window.customAlert(
-            `<div class="text-center py-2">
-                <div class="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-                <h3 class="text-base font-bold text-slate-900 uppercase">${escapeHtml(p.nama)}</h3>
-                <p class="text-xs text-red-600 font-bold mt-1">Status: ${escapeHtml(p.status)}</p>
-                <p class="text-xs text-slate-600 mt-2">Pendaftaran Anda belum diverifikasi atau belum lunas. Nomor BIB masih terkunci.</p>
-            </div>`,
-            "error",
-            "Pendaftaran Belum Verified"
-        );
-        return;
-    }
-
-    // Validasi 2: Status Check-In (Race Pack Collection)
-    const isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
+    // Validasi Status Check-In & Verifikasi
+    const isCheckedIn = window.isPesertaCheckedIn(p);
     if (!isCheckedIn) {
+        // Jika belum check in, cek apakah juga belum verified
+        if (!window.isPesertaVerified(p)) {
+            window.customAlert(
+                `<div class="text-center py-2">
+                    <div class="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900 uppercase">${escapeHtml(p.nama)}</h3>
+                    <p class="text-xs text-red-600 font-bold mt-1">Status: ${escapeHtml(p.status || 'Belum Lunas')}</p>
+                    <p class="text-xs text-slate-600 mt-2">Pendaftaran Anda belum diverifikasi atau belum lunas. Nomor BIB masih terkunci.</p>
+                </div>`,
+                "error",
+                "Pendaftaran Belum Verified"
+            );
+            return;
+        }
+
         window.customAlert(
             `<div class="space-y-3 py-1">
                 <div class="font-black text-slate-900 uppercase text-base sm:text-lg tracking-tight">${escapeHtml(p.nama)}</div>
@@ -2784,8 +2813,8 @@ function getCurrentSelectedBibRunner() {
         }
     }
     if (p) {
-        const isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
-        if (!isCheckedIn || p.status !== 'Verified') return null;
+        const isCheckedIn = window.isPesertaCheckedIn(p);
+        if (!isCheckedIn) return null;
     }
     return p;
 }
@@ -3619,7 +3648,7 @@ window.processStartScan = async function(inputVal) {
         return;
     }
 
-    if (p.status !== 'Verified') {
+    if (!window.isPesertaVerified(p)) {
         playBeep(false);
         if (box) {
             box.className = "p-6 rounded-2xl border-2 border-yellow-400 bg-yellow-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
