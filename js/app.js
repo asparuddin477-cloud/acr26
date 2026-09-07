@@ -282,6 +282,10 @@ window.closeCustomModal = function(val = true) {
         activeModalResolver = null;
         resolve(val);
     }
+    // Auto refocus EPPOS scanner input if on scanner-capable page
+    if (typeof window.refocusActiveScannerInput === 'function') {
+        window.refocusActiveScannerInput();
+    }
 };
 
 // Global ESC key listener to close modal
@@ -1700,18 +1704,23 @@ window.exportToPDF = async function() {
 // =====================================================================
 document.getElementById('formCheckin').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const inputVal = document.getElementById('checkinKode').value.toUpperCase().trim();
+    const rawVal = document.getElementById('checkinKode').value;
+    const inputVal = (window.cleanBarcodeInput ? window.cleanBarcodeInput(rawVal) : rawVal).toUpperCase().trim();
     
     // Cari berdasarkan Kode Pendaftaran ATAU Nomor BIB
     let p = State.currentMasterList.find(x => x.kode === inputVal || (x.bibNumber && x.bibNumber.toUpperCase() === inputVal));
 
     if (!p) {
+        if (typeof window.playBeep === 'function') window.playBeep(false);
         await window.customAlert("Kode Pendaftaran atau Nomor BIB tidak ditemukan di sistem!", "error");
+        window.refocusActiveScannerInput();
         return;
     }
 
     if (!window.isPesertaVerified(p)) {
+        if (typeof window.playBeep === 'function') window.playBeep(false);
         await window.customAlert(`Peserta <strong>${p.nama}</strong> (${p.kode}) belum diverifikasi pembayarannya.<br>Harap verifikasi terlebih dahulu di menu Master.`, "warning", "Belum Diverifikasi");
+        window.refocusActiveScannerInput();
         return;
     }
 
@@ -1719,6 +1728,7 @@ document.getElementById('formCheckin').addEventListener('submit', async function
 
     if (isAlreadyChecked && p.kodeLogistik) {
         // Jika sudah pernah check-in, gunakan kode logistik yang sama (tidak boleh buat kode baru/dobel!)
+        if (typeof window.playBeep === 'function') window.playBeep(true);
         document.getElementById('ciResNama').textContent = p.nama;
         document.getElementById('ciResKat').textContent = (p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim();
         document.getElementById('ciResBib').textContent = p.bibNumber;
@@ -1727,6 +1737,7 @@ document.getElementById('formCheckin').addEventListener('submit', async function
         document.getElementById('checkinSuccessModal').classList.remove('hidden');
         this.reset();
         await window.customAlert(`Peserta <strong>${p.nama}</strong> sudah check-in sebelumnya dengan kode: <strong class="text-blue-600 text-lg">${p.kodeLogistik}</strong>.<br><br>Kode yang sama telah dimuat untuk cetak ulang.`, "info", "Sudah Check-In");
+        window.refocusActiveScannerInput();
         return;
     }
 
@@ -1750,6 +1761,7 @@ document.getElementById('formCheckin').addEventListener('submit', async function
 
     const logCode = "LOG-" + String(nextNum).padStart(3, '0');
 
+    if (typeof window.playBeep === 'function') window.playBeep(true);
     document.getElementById('ciResNama').textContent = p.nama;
     document.getElementById('ciResKat').textContent = (p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim();
     document.getElementById('ciResBib').textContent = p.bibNumber;
@@ -1770,9 +1782,15 @@ document.getElementById('formCheckin').addEventListener('submit', async function
     });
 
     refreshActivePageUI();
+    window.refocusActiveScannerInput();
 });
 
-window.closeCheckinModal = function() { document.getElementById('checkinSuccessModal').classList.add('hidden'); };
+window.closeCheckinModal = function() { 
+    document.getElementById('checkinSuccessModal').classList.add('hidden'); 
+    if (typeof window.refocusActiveScannerInput === 'function') {
+        window.refocusActiveScannerInput();
+    }
+};
 
 window.renderCheckinHistory = function() {
     const container = document.getElementById('checkinHistoryList');
@@ -1937,17 +1955,26 @@ window.toggleLogistikScanner = async function() {
 
 document.getElementById('formLogistik').addEventListener('submit', async function(e) {
     if (e) e.preventDefault();
-    const inputVal = document.getElementById('inputKodeLogistik').value.toUpperCase().trim();
+    const rawVal = document.getElementById('inputKodeLogistik').value;
+    const inputVal = (window.cleanBarcodeInput ? window.cleanBarcodeInput(rawVal) : rawVal).toUpperCase().trim();
     let p = window.findPesertaForLogistik(inputVal);
     
     if (p) {
+        if (typeof window.playBeep === 'function') window.playBeep(true);
         window.openLogistikModalForPeserta(p);
     } else { 
+        if (typeof window.playBeep === 'function') window.playBeep(false);
         await window.customAlert(`Kode Logistik / BIB "${escapeHtml(inputVal)}" tidak ditemukan atau peserta belum melakukan Check-In di meja panitia.`, 'error', 'Tidak Ditemukan'); 
+        window.refocusActiveScannerInput();
     }
 });
 
-window.closeLogistikModal = function() { document.getElementById('logistikModal').classList.add('hidden'); };
+window.closeLogistikModal = function() { 
+    document.getElementById('logistikModal').classList.add('hidden'); 
+    if (typeof window.refocusActiveScannerInput === 'function') {
+        window.refocusActiveScannerInput();
+    }
+};
 
 window.saveLogistikItems = async function() {
     const docId = document.getElementById('currentLogKode').value;
@@ -3455,7 +3482,9 @@ let audioCtx = null;
 let startLiveCategoryFilter = 'ALL';
 let liveClockInterval = null;
 
-// Audio Feedback Web Audio API
+// =====================================================================
+// AUDIO FEEDBACK (WEB AUDIO API)
+// =====================================================================
 function playBeep(isSuccess) {
     try {
         if (!audioCtx) {
@@ -3494,18 +3523,226 @@ function playBeep(isSuccess) {
         console.warn("Audio Context tidak diizinkan atau belum aktif:", e);
     }
 }
+window.playBeep = playBeep;
+
+// Tombol Uji Suara Audio Beep untuk Operator
+window.testBeepSound = function() {
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.setValueAtTime(880, now + 0.1); // A5
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+
+        // Feedback toast visual
+        const existingToast = document.getElementById('audioBeepToast');
+        if (existingToast) existingToast.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'audioBeepToast';
+        toast.className = 'fixed bottom-5 right-5 z-[9999] bg-slate-900 text-emerald-400 px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/40 text-xs font-bold flex items-center gap-2 transition-opacity duration-300';
+        toast.innerHTML = '<span class="text-base">🔊</span><span>Audio Beep Berfungsi Normal! (Volume OK)</span>';
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 2000);
+    } catch (e) {
+        console.warn("Test audio gagal:", e);
+    }
+};
+
+// =====================================================================
+// ENGINE SCANNER TEMBAK EPPOS (USB & WIRELESS HID)
+// =====================================================================
+window.cleanBarcodeInput = function(raw) {
+    if (!raw) return '';
+    let s = String(raw).trim().replace(/[\r\n\t]/g, '');
+    
+    // Jika barcode/QR berupa URL lengkap
+    if (s.includes('http://') || s.includes('https://') || s.includes('?')) {
+        try {
+            const url = new URL(s.startsWith('http') ? s : 'http://' + s);
+            const param = url.searchParams.get('bib') || 
+                          url.searchParams.get('kode') || 
+                          url.searchParams.get('id') || 
+                          url.searchParams.get('q');
+            if (param) return param.trim().toUpperCase();
+        } catch (e) {
+            const m = s.match(/(?:bib|kode|id)=([A-Za-z0-9\-]+)/i);
+            if (m && m[1]) return m[1].toUpperCase();
+        }
+    }
+    return s.toUpperCase();
+};
+
+window.getActivePageScannerInput = function() {
+    if (State.activePage === 'startgate') return document.getElementById('manualStartInput');
+    if (State.activePage === 'checkin') return document.getElementById('checkinKode');
+    if (State.activePage === 'logistik') return document.getElementById('inputKodeLogistik');
+    if (State.activePage === 'bibcheck') return document.getElementById('bibSearchInput');
+    return null;
+};
+
+window.refocusActiveScannerInput = function() {
+    setTimeout(() => {
+        const inp = window.getActivePageScannerInput();
+        if (inp && document.activeElement !== inp) {
+            inp.focus();
+        }
+    }, 120);
+};
+
+window.routeEpposScan = async function(rawCode) {
+    const cleanCode = window.cleanBarcodeInput(rawCode);
+    if (!cleanCode) return;
+
+    if (State.activePage === 'startgate') {
+        const inp = document.getElementById('manualStartInput');
+        if (inp) inp.value = '';
+        await window.processStartScan(cleanCode);
+        window.refocusActiveScannerInput();
+    } else if (State.activePage === 'checkin') {
+        const inp = document.getElementById('checkinKode');
+        if (inp) inp.value = cleanCode;
+        const form = document.getElementById('formCheckin');
+        if (form) {
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+    } else if (State.activePage === 'logistik') {
+        const inp = document.getElementById('inputKodeLogistik');
+        if (inp) inp.value = cleanCode;
+        const form = document.getElementById('formLogistik');
+        if (form) {
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+    } else if (State.activePage === 'bibcheck') {
+        const inp = document.getElementById('bibSearchInput');
+        if (inp) inp.value = cleanCode;
+        if (typeof window.handleBibSearchInput === 'function') {
+            window.handleBibSearchInput(cleanCode);
+        }
+        if (typeof window.submitBibSearch === 'function') {
+            window.submitBibSearch();
+        }
+    }
+};
+
+// Global Keystroke Buffer & Interceptor EPPOS
+let epposScannerBuffer = '';
+let epposLastKeyTime = 0;
+let epposClearTimer = null;
+
+window.addEventListener('keydown', function(e) {
+    // Abaikan shortcut sistem umum
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) return;
+
+    // Aktif hanya pada halaman yang mendukung pemindaian
+    const scannerPages = ['startgate', 'checkin', 'logistik', 'bibcheck'];
+    if (!scannerPages.includes(State.activePage)) return;
+
+    // Jangan tangkap jika dialog customModal sedang aktif terbuka
+    const customModal = document.getElementById('customModal');
+    if (customModal && !customModal.classList.contains('hidden')) return;
+
+    const activeEl = document.activeElement;
+    const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+    const activeId = activeEl ? activeEl.id : '';
+
+    // Jika fokus sedang berada di input scanner yang tepat:
+    if (isInput) {
+        if (activeId === 'manualStartInput' && e.key === 'Enter') {
+            e.preventDefault();
+            window.submitManualStart();
+            return;
+        }
+        // Biarkan input lain menerima ketikan normal
+        return;
+    }
+
+    // --- Mode Hands-Free (Fokus di luar kotak input) ---
+    const now = Date.now();
+    if (now - epposLastKeyTime > 350) {
+        epposScannerBuffer = '';
+    }
+    epposLastKeyTime = now;
+
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const scanned = epposScannerBuffer.trim();
+        epposScannerBuffer = '';
+        if (scanned) {
+            window.routeEpposScan(scanned);
+        } else {
+            const curInput = window.getActivePageScannerInput();
+            if (curInput && curInput.value.trim()) {
+                window.routeEpposScan(curInput.value.trim());
+            }
+        }
+        window.refocusActiveScannerInput();
+        return;
+    }
+
+    if (e.key.length === 1) {
+        epposScannerBuffer += e.key;
+        const curInput = window.getActivePageScannerInput();
+        if (curInput) {
+            curInput.value = epposScannerBuffer;
+        }
+        if (epposClearTimer) clearTimeout(epposClearTimer);
+        epposClearTimer = setTimeout(() => {
+            epposScannerBuffer = '';
+        }, 400);
+    }
+});
+
+// Auto-refocus keep-alive: Mengembalikan fokus saat petugas klik di background
+document.addEventListener('click', (e) => {
+    if (State.activePage === 'startgate') {
+        const isInteractive = e.target.closest('button, select, a, textarea, input, label, [role="button"], option');
+        if (!isInteractive) {
+            window.refocusActiveScannerInput();
+        }
+    }
+});
+
+// Unlock audio context pada interaksi pertama pengguna
+const unlockAudioOnInteraction = () => {
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+};
+window.addEventListener('click', unlockAudioOnInteraction, { passive: true });
+window.addEventListener('keydown', unlockAudioOnInteraction, { passive: true });
 
 window.changeStartGate = function(gateVal) {
     currentStartGate = gateVal || 'Gate 1';
     const lbl = document.getElementById('lblCurrentGate');
     if (lbl) lbl.textContent = currentStartGate;
     renderGateRecentList();
+    window.refocusActiveScannerInput();
 };
 
 window.initStartGatePage = function() {
     updateStartGateCounters();
     renderGateRecentList();
     window.startStartGateScanner();
+    window.refocusActiveScannerInput();
 };
 
 window.startStartGateScanner = async function() {
@@ -3555,7 +3792,7 @@ window.startStartGateScanner = async function() {
             box.innerHTML = `
                 <span class="text-4xl mb-2">📷</span>
                 <h3 class="font-bold text-amber-900 text-base">Kamera Tidak Tersedia</h3>
-                <p class="text-xs text-amber-700 mt-1 max-w-xs">Izin kamera belum diberikan atau perangkat tidak memiliki kamera aktif. Anda tetap dapat menggunakan <strong>Input Manual</strong> di bawah!</p>
+                <p class="text-xs text-amber-700 mt-1 max-w-xs">Izin kamera belum diberikan atau perangkat tidak memiliki kamera aktif. Anda tetap dapat menggunakan <strong>Scanner Tembak EPPOS / Input Manual</strong> di bawah!</p>
             `;
         }
     }
@@ -3596,7 +3833,7 @@ let lastScannedTime = 0;
 window.handleStartScan = async function(rawCode) {
     if (!rawCode) return;
     const now = Date.now();
-    const cleanCode = String(rawCode).trim().toUpperCase();
+    const cleanCode = (window.cleanBarcodeInput ? window.cleanBarcodeInput(rawCode) : String(rawCode)).trim().toUpperCase();
 
     if (cleanCode === lastScannedCode && (now - lastScannedTime) < 2500) {
         return;
@@ -3617,22 +3854,31 @@ window.submitManualStart = async function(e) {
 
     await window.processStartScan(val);
     input.value = '';
-    input.focus();
+    window.refocusActiveScannerInput();
 };
 
 window.processStartScan = async function(inputVal) {
     const box = document.getElementById('startScanResultBox');
-    const q = String(inputVal).trim().toUpperCase();
+    const q = (window.cleanBarcodeInput ? window.cleanBarcodeInput(inputVal) : String(inputVal)).trim().toUpperCase();
     const qDigits = q.replace(/\D/g, '');
 
     let p = State.currentMasterList.find(x => {
-        const b = String(x.bibNumber || '').toUpperCase();
-        const k = String(x.kode || '').toUpperCase();
+        const b = String(x.bibNumber || '').toUpperCase().trim();
+        const k = String(x.kode || '').toUpperCase().trim();
         const bDigits = b.replace(/\D/g, '');
 
-        return b === q ||
-               k === q ||
-               (qDigits.length >= 3 && (bDigits === qDigits || bDigits.endsWith(qDigits)));
+        // 1. Exact match with BIB or Registration Code
+        if (b === q || k === q) return true;
+
+        // 2. Exact match with numeric BIB
+        if (qDigits && bDigits && qDigits.length >= 3 && bDigits === qDigits) return true;
+
+        // 3. Match without dash/spaces (e.g. "P1001" vs "P-1001")
+        const bClean = b.replace(/[^A-Z0-9]/g, '');
+        const qClean = q.replace(/[^A-Z0-9]/g, '');
+        if (bClean && qClean && bClean === qClean) return true;
+
+        return false;
     });
 
     if (!p) {
@@ -3645,6 +3891,7 @@ window.processStartScan = async function(inputVal) {
                 <p class="text-xs text-red-600 mt-1">Kode / BIB "<strong>${escapeHtml(inputVal)}</strong>" tidak ada di sistem.</p>
             `;
         }
+        window.refocusActiveScannerInput();
         return;
     }
 
@@ -3658,6 +3905,7 @@ window.processStartScan = async function(inputVal) {
                 <p class="text-xs text-yellow-700 mt-1">Peserta <strong>${escapeHtml(p.nama)}</strong> (${escapeHtml(p.bibNumber || p.kode)}) berstatus <em>${escapeHtml(p.status)}</em>.</p>
             `;
         }
+        window.refocusActiveScannerInput();
         return;
     }
 
@@ -3676,6 +3924,7 @@ window.processStartScan = async function(inputVal) {
                 <span class="mt-3 px-3 py-1 bg-amber-200/80 text-amber-900 text-[11px] font-bold rounded-full">Anti-Duplicate Protection</span>
             `;
         }
+        window.refocusActiveScannerInput();
         return;
     }
 
@@ -3720,6 +3969,7 @@ window.processStartScan = async function(inputVal) {
     if (recentGateScans.length > 30) recentGateScans.pop();
     renderGateRecentList();
     updateStartGateCounters();
+    window.refocusActiveScannerInput();
 
     try {
         await updatePeserta(p.kode, {

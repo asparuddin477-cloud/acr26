@@ -543,10 +543,10 @@
                             <span>GATE CONTROL • RACE TIMING</span>
                         </div>
                         <h2 class="text-2xl sm:text-3xl font-black text-slate-900">Gerbang Start Scanner 🏁</h2>
-                        <p class="text-xs sm:text-sm text-slate-500 mt-1">Arahkan kamera ke QR Code BIB peserta untuk verifikasi start resmi.</p>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1">Arahkan scanner tembak EPPOS atau kamera ke QR/Barcode BIB pelari untuk validasi start resmi.</p>
                     </div>
 
-                    <!-- Gate Selection Dropdown & Reset Action -->
+                    <!-- Gate Selection Dropdown & Actions -->
                     <div class="flex flex-wrap items-center gap-2">
                         <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200">
                             <label for="startGateSelector" class="text-xs font-bold text-slate-600 pl-2">Jalur:</label>
@@ -563,10 +563,30 @@
                                 <option value="Gate 10">Gate 10</option>
                             </select>
                         </div>
-                        <button type="button" onclick="resetAllStartGateData()" class="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl text-xs font-bold transition active:scale-95 flex items-center gap-1.5 shadow-xs" title="Reset/Hapus status peserta yang sudah start">
-                            <span>🗑️ Reset Data Start</span>
+                        <button type="button" onclick="testBeepSound()" class="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-2xl text-xs font-bold transition active:scale-95 flex items-center gap-1.5 shadow-xs cursor-pointer" title="Uji suara audio speaker laptop/PC">
+                            <span>🔊 Tes Audio Beep</span>
+                        </button>
+                        <button type="button" onclick="resetAllStartGateData()" class="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl text-xs font-bold transition active:scale-95 flex items-center gap-1.5 shadow-xs cursor-pointer" title="Reset/Hapus status peserta yang sudah start">
+                            <span>🗑️ Reset</span>
                         </button>
                     </div>
+                </div>
+
+                <!-- Status Hardware EPPOS & Info Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100 text-xs">
+                    <div class="flex items-center gap-2">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold shadow-xs">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span>🔫 Scanner Tembak EPPOS: AKTIF & SIAP</span>
+                        </div>
+                        <span class="text-[11px] text-slate-500 hidden sm:inline">• Hands-Free Auto-Capture & Auto-Refocus</span>
+                    </div>
+                    <span class="text-[11px] font-mono text-purple-700 font-bold bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100">
+                        Jalur Aktif: <strong id="lblCurrentGate">Gate 1</strong>
+                    </span>
                 </div>
 
                 <!-- Scanner Viewport & Live Feedback -->
@@ -586,13 +606,24 @@
                             </button>
                         </div>
 
-                        <!-- Manual Input Fallback -->
-                        <div class="w-full max-w-sm mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl shadow-inner">
-                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Input Manual (Nomor BIB / Kode)</label>
+                        <!-- Manual Input Fallback & EPPOS Gun Input -->
+                        <div class="w-full max-w-sm mt-4 p-4 bg-gradient-to-br from-purple-50/50 to-slate-50 border-2 border-purple-200 rounded-2xl shadow-sm">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label for="manualStartInput" class="text-[11px] font-black text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span>🔫 Scanner Tembak EPPOS / Input Manual</span>
+                                </label>
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    Siap Tembak
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mb-2 leading-relaxed">
+                                Tembak barcode/QR BIB dengan scanner EPPOS (USB/Wireless) secara langsung tanpa harus mengklik kolom input.
+                            </p>
                             <form onsubmit="submitManualStart(event)" class="flex gap-2">
-                                <input type="text" id="manualStartInput" placeholder="Contoh: P-1001 atau 1001" class="flex-1 px-3 py-2.5 border rounded-xl text-xs sm:text-sm font-mono font-bold outline-none focus:border-purple-600 bg-white shadow-sm">
-                                <button type="submit" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-md">
-                                    Start!
+                                <input type="text" id="manualStartInput" autocomplete="off" placeholder="Arahkan scanner EPPOS lalu tembak..." class="flex-1 px-3 py-2.5 border-2 border-purple-300 focus:border-purple-600 rounded-xl text-xs sm:text-sm font-mono font-bold outline-none bg-white shadow-sm transition">
+                                <button type="submit" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-md flex items-center gap-1 cursor-pointer">
+                                    <span>Start!</span> ⚡
                                 </button>
                             </form>
                         </div>
@@ -845,8 +876,14 @@
             <div class="bg-white rounded-3xl shadow-sm border border-blue-200 p-6 mb-6">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 mb-4 border-b border-slate-100 gap-3">
                     <div>
-                        <h3 class="text-lg font-bold text-slate-800">Scan / Input Kode Logistik</h3>
-                        <p class="text-xs text-slate-500">Arahkan kamera ke QR Code Logistik peserta (atau ketik nomor/kode manual).</p>
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 class="text-lg font-bold text-slate-800">Scan / Input Kode Logistik</h3>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-[10px] font-bold">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Scanner EPPOS Siap
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500">Tembak QR Logistik/BIB dengan scanner EPPOS, atau buka kamera scanner, atau ketik manual.</p>
                     </div>
                     <button type="button" onclick="toggleLogistikScanner()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-sm flex items-center gap-2 flex-shrink-0 cursor-pointer">
                         <span id="txtLogistikScanner">📷 Buka Kamera Scanner</span>
@@ -862,7 +899,7 @@
                 </div>
 
                 <form id="formLogistik" class="flex space-x-2">
-                    <input type="text" id="inputKodeLogistik" required placeholder="Contoh: LOG-003, atau ketik 3, atau nomor BIB (U-1055)" class="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl font-mono uppercase outline-none focus:border-blue-500 text-xs sm:text-sm bg-slate-50 focus:bg-white">
+                    <input type="text" id="inputKodeLogistik" required placeholder="Tembak scanner EPPOS / ketik: LOG-003, nomor BIB (U-1055)" class="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl font-mono uppercase outline-none focus:border-blue-500 text-xs sm:text-sm bg-slate-50 focus:bg-white shadow-inner">
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 rounded-xl active:scale-95 transition shadow-sm cursor-pointer">Cari</button>
                 </form>
             </div>
@@ -895,12 +932,16 @@
         <section id="page-checkin" class="page-section max-w-xl mx-auto">
             <div class="bg-white rounded-3xl shadow-sm border border-emerald-200 p-6 sm:p-10 text-center mb-6">
                 <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-xs font-bold mb-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Dukungan Scanner Tembak EPPOS Aktif</span>
+                </div>
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-2">Race Pack Check-In</h2>
-                <p class="text-slate-500 text-sm mb-6">Masukkan Kode Daftar peserta untuk absensi dan pembagian Nomor BIB.</p>
+                <p class="text-slate-500 text-sm mb-6">Tembak barcode dengan scanner EPPOS atau ketik Kode Pendaftaran peserta untuk absensi dan alokasi BIB.</p>
                 
                 <form id="formCheckin" class="space-y-4">
-                    <input type="text" id="checkinKode" required placeholder="RUN-XXXXXX" class="w-full px-4 py-4 border-2 border-slate-300 rounded-xl font-mono text-center text-2xl uppercase focus:border-emerald-500 outline-none">
-                    <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl shadow-md hover:bg-emerald-700 active:scale-95 transition">Proses Check-In</button>
+                    <input type="text" id="checkinKode" required placeholder="Tembak Scanner / Ketik RUN-XXXXXX" class="w-full px-4 py-4 border-2 border-slate-300 focus:border-emerald-500 rounded-xl font-mono text-center text-xl sm:text-2xl uppercase outline-none shadow-inner">
+                    <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl shadow-md hover:bg-emerald-700 active:scale-95 transition cursor-pointer">Proses Check-In</button>
                 </form>
             </div>
 

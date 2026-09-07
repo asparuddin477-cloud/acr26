@@ -1,0 +1,11 @@
+__pycache__/
+*.py
+*.pyc
+*.log
+.git
+.system_generated
+download_seed.py
+generate_excel.py
+update_bib_format.py
+upload_all_to_firebase.py
+export_to_csv.py
