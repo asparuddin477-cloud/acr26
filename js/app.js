@@ -242,6 +242,30 @@ async function saveSettings(settingsPayload) {
 // =====================================================================
 // CUSTOM ALERTS & CONFIRMS
 // =====================================================================
+let activeModalResolver = null;
+
+window.closeCustomModal = function(val = true) {
+    const modal = document.getElementById('customModal');
+    if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+    }
+    if (activeModalResolver) {
+        const resolve = activeModalResolver;
+        activeModalResolver = null;
+        resolve(val);
+    }
+};
+
+// Global ESC key listener to close modal
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('customModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            window.closeCustomModal(false);
+        }
+    }
+});
+
 window.customAlert = function(message, type = 'info', title = null) {
     return new Promise((resolve) => {
         const modal = document.getElementById('customModal');
@@ -249,32 +273,38 @@ window.customAlert = function(message, type = 'info', title = null) {
         const titleEl = document.getElementById('customModalTitle');
         const descEl = document.getElementById('customModalDesc');
         const actionsDiv = document.getElementById('customModalActions');
+        const closeBtn = document.getElementById('customModalCloseBtn');
+
+        activeModalResolver = resolve;
 
         descEl.innerHTML = message;
         if (type === 'error') {
-            iconDiv.className = "w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4";
-            iconDiv.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            iconDiv.className = "w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3";
+            iconDiv.innerHTML = `<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
             titleEl.textContent = title || "Terjadi Kesalahan";
         } else if (type === 'success') {
-            iconDiv.className = "w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4";
-            iconDiv.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            iconDiv.className = "w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3";
+            iconDiv.innerHTML = `<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
             titleEl.textContent = title || "Berhasil";
         } else if (type === 'warning') {
-            iconDiv.className = "w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4";
-            iconDiv.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            iconDiv.className = "w-14 h-14 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-3";
+            iconDiv.innerHTML = `<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
             titleEl.textContent = title || "Peringatan";
         } else {
-            iconDiv.className = "w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4";
-            iconDiv.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            iconDiv.className = "w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3";
+            iconDiv.innerHTML = `<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
             titleEl.textContent = title || "Informasi";
         }
 
-        actionsDiv.innerHTML = `<button id="customModalOkBtn" class="flex-1 px-4 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition text-sm shadow-md">OK Mengerti</button>`;
+        actionsDiv.innerHTML = `<button id="customModalOkBtn" class="flex-1 px-5 py-3 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold rounded-xl transition text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer"><span>Tutup & Keluar</span> ✕</button>`;
         modal.classList.remove('hidden');
 
-        document.getElementById('customModalOkBtn').onclick = () => {
-            modal.classList.add('hidden');
-            resolve(true);
+        document.getElementById('customModalOkBtn').onclick = () => window.closeCustomModal(true);
+        if (closeBtn) {
+            closeBtn.onclick = () => window.closeCustomModal(true);
+        }
+        modal.onclick = (e) => {
+            if (e.target === modal) window.closeCustomModal(true);
         };
     });
 };
@@ -286,20 +316,29 @@ window.customConfirm = function(message, title = "Konfirmasi") {
         const titleEl = document.getElementById('customModalTitle');
         const descEl = document.getElementById('customModalDesc');
         const actionsDiv = document.getElementById('customModalActions');
+        const closeBtn = document.getElementById('customModalCloseBtn');
+
+        activeModalResolver = resolve;
 
         descEl.innerHTML = message;
         titleEl.textContent = title;
-        iconDiv.className = "w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4";
-        iconDiv.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        iconDiv.className = "w-14 h-14 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-3";
+        iconDiv.innerHTML = `<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
 
         actionsDiv.innerHTML = `
-            <button id="customModalCancelBtn" class="flex-1 px-4 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition text-sm border border-slate-200">Batal</button>
-            <button id="customModalConfirmBtn" class="flex-1 px-4 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition text-sm shadow-md">Ya, Lanjutkan</button>
+            <button id="customModalCancelBtn" class="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition text-sm border border-slate-200 active:scale-95 cursor-pointer">Batal / Keluar</button>
+            <button id="customModalConfirmBtn" class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition text-sm shadow-md active:scale-95 cursor-pointer">Ya, Lanjutkan</button>
         `;
         modal.classList.remove('hidden');
 
-        document.getElementById('customModalConfirmBtn').onclick = () => { modal.classList.add('hidden'); resolve(true); };
-        document.getElementById('customModalCancelBtn').onclick = () => { modal.classList.add('hidden'); resolve(false); };
+        document.getElementById('customModalConfirmBtn').onclick = () => window.closeCustomModal(true);
+        document.getElementById('customModalCancelBtn').onclick = () => window.closeCustomModal(false);
+        if (closeBtn) {
+            closeBtn.onclick = () => window.closeCustomModal(false);
+        }
+        modal.onclick = (e) => {
+            if (e.target === modal) window.closeCustomModal(false);
+        };
     });
 };
 
@@ -2524,23 +2563,20 @@ window.showBibScreen = function(kode) {
     const isCheckedIn = p.checkedIn === true || p.checkedIn === 'TRUE' || p.checkedIn === 'true';
     if (!isCheckedIn) {
         window.customAlert(
-            `<div class="text-center py-2">
-                <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                </div>
-                <h3 class="text-base font-black text-slate-900 uppercase">${escapeHtml(p.nama)}</h3>
-                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold my-2 border border-amber-200">
+            `<div class="space-y-3 py-1">
+                <div class="font-black text-slate-900 uppercase text-base sm:text-lg tracking-tight">${escapeHtml(p.nama)}</div>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold border border-amber-200">
                     <span>🔒 BIB BELUM DI-CHECK IN</span>
                 </div>
                 <p class="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
                     Layar BIB resmi & Photo Booth <strong>hanya dapat dibuka</strong> untuk peserta yang sudah melakukan <strong>Check-In / Pengambilan Race Pack</strong> di lokasi lomba.
                 </p>
-                <div class="mt-4 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 text-left">
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 text-left">
                     <p class="font-bold text-slate-800 mb-1 flex items-center gap-1"><span>📍</span> Petunjuk untuk Pelari:</p>
                     <ol class="list-decimal pl-4 space-y-1 text-slate-500">
                         <li>Kunjungi loket Race Pack Collection panitia di venue.</li>
                         <li>Tunjukkan Kode Pendaftaran: <strong class="font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">${escapeHtml(p.kode)}</strong>.</li>
-                        <li>Setelah panitia memproses check-in, layar BIB dan nomor BIB resmi Anda akan otomatis aktif!</li>
+                        <li>Setelah panitia memproses check-in, nomor BIB resmi Anda akan otomatis terbuka!</li>
                     </ol>
                 </div>
             </div>`,
