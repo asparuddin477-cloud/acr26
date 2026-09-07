@@ -1898,6 +1898,71 @@ window.openLogistikModalForPeserta = function(p) {
     document.getElementById('logistikModal').classList.remove('hidden');
 };
 
+// =====================================================================
+// UTILITY KAMERA & WEBCAM TRACK RELEASER
+// =====================================================================
+window.releaseAllCameraTracks = function() {
+    try {
+        document.querySelectorAll('video').forEach(vid => {
+            if (vid.srcObject && typeof vid.srcObject.getTracks === 'function') {
+                vid.srcObject.getTracks().forEach(track => {
+                    try { track.stop(); } catch(e){}
+                });
+                vid.srcObject = null;
+            }
+        });
+    } catch(e) {
+        console.warn("Gagal melepas track kamera:", e);
+    }
+};
+
+window.formatCameraErrorMessage = function(err) {
+    const raw = String(err && (err.message || err.name || err)).toLowerCase();
+    
+    if (raw.includes('notreadableerror') || raw.includes('could not start video source') || raw.includes('trackstarterror') || raw.includes('in use') || raw.includes('device in use') || raw.includes('starting video failed')) {
+        return {
+            title: "Kamera Sedang Digunakan Tab / Aplikasi Lain",
+            message: `Kamera tidak dapat diakses karena <strong>sedang digunakan atau terkunci oleh tab / aplikasi lain</strong> di laptop ini.<br><br>
+            <strong>💡 Cara Mengatasi:</strong><br>
+            <ol class="list-decimal list-inside space-y-1.5 text-left my-2 text-xs text-slate-700 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                <li>Periksa tab browser lain di laptop Anda (misalnya tab <strong>localhost:8000</strong>, WhatsApp Web, Google Meet, Zoom) yang sedang membuka kamera, lalu <strong>tutup tab tersebut</strong>.</li>
+                <li>Setelah tab lain ditutup, klik tombol <strong>Buka Kamera Scanner</strong> kembali.</li>
+            </ol>
+            <div class="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs text-left leading-relaxed">
+                <strong>🔫 Alternatif Tanpa Kamera:</strong> Anda tidak wajib menggunakan kamera! Anda bisa langsung menembakkan <strong>Scanner Tembak EPPOS</strong> (USB/Wireless) atau <strong>mengetik nomor BIB / kode</strong> pada kotak input pencarian.
+            </div>`
+        };
+    }
+
+    if (raw.includes('notallowederror') || raw.includes('permission') || raw.includes('denied')) {
+        return {
+            title: "Izin Akses Kamera Ditolak",
+            message: `Browser memblokir izin akses ke kamera pada situs ini.<br><br>
+            <strong>💡 Cara Mengaktifkan Izin:</strong><br>
+            <ol class="list-decimal list-inside space-y-1.5 text-left my-2 text-xs text-slate-700 bg-blue-50 p-3 rounded-xl border border-blue-200">
+                <li>Klik ikon <strong>gembok / pengaturan situs</strong> di sebelah kiri bilah alamat URL browser (di samping nama domain).</li>
+                <li>Ubah perizinan <strong>Kamera (Camera)</strong> menjadi <strong>Izinkan (Allow)</strong>.</li>
+                <li>Muat ulang (refresh) halaman lalu coba lagi.</li>
+            </ol>
+            <div class="mt-2 text-xs text-slate-500">Atau langsung gunakan <strong>Scanner Tembak EPPOS</strong> tanpa memerlukan izin kamera.</div>`
+        };
+    }
+
+    if (raw.includes('notfounderror') || raw.includes('devicesnotfound') || raw.includes('no camera')) {
+        return {
+            title: "Kamera Tidak Ditemukan",
+            message: `Tidak ditemukan webcam atau kamera aktif pada laptop/komputer ini.<br><br>
+            Silakan gunakan <strong>Scanner Tembak EPPOS</strong> atau ketik nomor BIB secara manual.`
+        };
+    }
+
+    return {
+        title: "Kamera Tidak Dapat Dibuka",
+        message: `Terjadi kendala saat mengakses kamera:<br><code class="text-xs text-rose-600 bg-rose-50 px-2 py-1 rounded my-2 inline-block">${escapeHtml(err.message || String(err))}</code><br><br>
+        Silakan tutup tab lain yang sedang memakai webcam atau gunakan <strong>Scanner Tembak EPPOS / Input Manual</strong>.`
+    };
+};
+
 let logistikQrScanner = null;
 let isLogistikScannerActive = false;
 
@@ -1909,13 +1974,21 @@ window.toggleLogistikScanner = async function() {
     if (isLogistikScannerActive) {
         if (logistikQrScanner) {
             try { await logistikQrScanner.stop(); } catch(e){}
+            try { await logistikQrScanner.clear(); } catch(e){}
             logistikQrScanner = null;
         }
         isLogistikScannerActive = false;
+        if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
         wrapper.classList.add('hidden');
         if (txtBtn) txtBtn.textContent = '📷 Buka Kamera Scanner';
         return;
     }
+
+    // Hentikan scanner Gerbang Start terlebih dahulu jika sedang aktif agar webcam tidak bentrok
+    if (window.stopStartGateScanner) {
+        await window.stopStartGateScanner();
+    }
+    if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
 
     wrapper.classList.remove('hidden');
     if (txtBtn) txtBtn.textContent = '⏹️ Hentikan Kamera';
@@ -1923,33 +1996,90 @@ window.toggleLogistikScanner = async function() {
 
     try {
         if (typeof Html5Qrcode === 'undefined') {
-            throw new Error("Library pemindai kamera belum siap.");
+            throw new Error("Library pemindai kamera belum siap dimuat.");
         }
-        logistikQrScanner = new Html5Qrcode("logistikQrReader");
-        await logistikQrScanner.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 220, height: 220 } },
-            async (decodedText) => {
-                if (decodedText) {
-                    if (typeof playBeep === 'function') playBeep(true);
-                    window.toggleLogistikScanner();
-                    document.getElementById('inputKodeLogistik').value = decodedText;
-                    const p = window.findPesertaForLogistik(decodedText);
-                    if (p) {
-                        window.openLogistikModalForPeserta(p);
-                    } else {
-                        await window.customAlert(`Kode "${escapeHtml(decodedText)}" tidak valid atau peserta belum melakukan check-in.`, 'warning', 'Tidak Ditemukan');
-                    }
+
+        if (!logistikQrScanner) {
+            logistikQrScanner = new Html5Qrcode("logistikQrReader");
+        }
+
+        // Kumpulkan kandidat kamera yang tersedia
+        const cameraTargets = [];
+        try {
+            const cameras = await Html5Qrcode.getCameras();
+            if (cameras && cameras.length > 0) {
+                const backCam = cameras.find(c => {
+                    const l = (c.label || '').toLowerCase();
+                    return l.includes('back') || l.includes('rear') || l.includes('belakang') || l.includes('environment');
+                });
+                if (backCam) cameraTargets.push(backCam.id);
+                cameraTargets.push(cameras[0].id);
+                cameras.forEach(c => {
+                    if (!cameraTargets.includes(c.id)) cameraTargets.push(c.id);
+                });
+            }
+        } catch(camErr) {
+            console.warn("Gagal deteksi kamera perangkat:", camErr);
+        }
+
+        // Fallback constraint
+        cameraTargets.push({ facingMode: "environment" });
+        cameraTargets.push({ facingMode: "user" });
+
+        const qrConfig = {
+            fps: 10,
+            qrbox: { width: 220, height: 220 },
+            aspectRatio: 1.0
+        };
+
+        const onScanSuccess = async (decodedText) => {
+            if (decodedText) {
+                if (typeof playBeep === 'function') playBeep(true);
+                window.toggleLogistikScanner();
+                document.getElementById('inputKodeLogistik').value = decodedText;
+                const p = window.findPesertaForLogistik(decodedText);
+                if (p) {
+                    window.openLogistikModalForPeserta(p);
+                } else {
+                    await window.customAlert(`Kode "${escapeHtml(decodedText)}" tidak valid atau peserta belum melakukan check-in.`, 'warning', 'Tidak Ditemukan');
                 }
-            },
-            () => {}
-        );
+            }
+        };
+
+        let started = false;
+        let lastErr = null;
+        for (const target of cameraTargets) {
+            try {
+                await logistikQrScanner.start(target, qrConfig, onScanSuccess, () => {});
+                started = true;
+                break;
+            } catch (targetErr) {
+                console.warn("Gagal start kamera logistik dengan target:", target, targetErr);
+                lastErr = targetErr;
+                if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
+            }
+        }
+
+        if (!started && lastErr) {
+            throw lastErr;
+        }
+
     } catch (err) {
         console.error("Gagal membuka kamera logistik:", err);
         isLogistikScannerActive = false;
+        if (logistikQrScanner) {
+            try { await logistikQrScanner.clear(); } catch(e){}
+            logistikQrScanner = null;
+        }
+        if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
         wrapper.classList.add('hidden');
         if (txtBtn) txtBtn.textContent = '📷 Buka Kamera Scanner';
-        window.customAlert("Tidak dapat mengakses kamera: " + (err.message || err), "error");
+
+        const info = window.formatCameraErrorMessage(err);
+        await window.customAlert(info.message, "warning", info.title);
+        if (typeof window.refocusActiveScannerInput === 'function') {
+            window.refocusActiveScannerInput();
+        }
     }
 };
 
@@ -3757,6 +3887,12 @@ window.startStartGateScanner = async function() {
         return;
     }
 
+    // Hentikan scanner logistik jika sedang aktif agar tidak tabrakan
+    if (isLogistikScannerActive && window.toggleLogistikScanner) {
+        await window.toggleLogistikScanner();
+    }
+    if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
+
     try {
         if (!html5QrScanner) {
             html5QrScanner = new Html5Qrcode("startQrReader");
@@ -3768,47 +3904,100 @@ window.startStartGateScanner = async function() {
             aspectRatio: 1.0
         };
 
-        await html5QrScanner.start(
-            { facingMode: currentFacingMode },
-            config,
-            (decodedText) => {
-                window.handleStartScan(decodedText);
-            },
-            () => {}
-        );
+        const cameraTargets = [];
+        try {
+            const cameras = await Html5Qrcode.getCameras();
+            if (cameras && cameras.length > 0) {
+                if (currentFacingMode === "environment") {
+                    const backCam = cameras.find(c => {
+                        const l = (c.label || '').toLowerCase();
+                        return l.includes('back') || l.includes('rear') || l.includes('belakang') || l.includes('environment');
+                    });
+                    if (backCam) cameraTargets.push(backCam.id);
+                }
+                cameraTargets.push(cameras[0].id);
+                cameras.forEach(c => {
+                    if (!cameraTargets.includes(c.id)) cameraTargets.push(c.id);
+                });
+            }
+        } catch(e) {
+            console.warn("Gagal getCameras startgate:", e);
+        }
+
+        cameraTargets.push({ facingMode: currentFacingMode });
+        cameraTargets.push({ facingMode: currentFacingMode === "environment" ? "user" : "environment" });
+
+        let started = false;
+        let lastErr = null;
+        for (const target of cameraTargets) {
+            try {
+                await html5QrScanner.start(
+                    target,
+                    config,
+                    (decodedText) => {
+                        window.handleStartScan(decodedText);
+                    },
+                    () => {}
+                );
+                started = true;
+                break;
+            } catch(targetErr) {
+                console.warn("Gagal start kamera startgate dengan target:", target, targetErr);
+                lastErr = targetErr;
+                if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
+            }
+        }
+
+        if (!started && lastErr) {
+            throw lastErr;
+        }
 
         isScannerRunning = true;
         const btnTxt = document.getElementById('txtToggleScanner');
         if (btnTxt) btnTxt.textContent = "Hentikan Kamera";
     } catch (err) {
-        console.warn("Gagal membuka kamera:", err);
+        console.warn("Gagal membuka kamera startgate:", err);
         isScannerRunning = false;
+        if (html5QrScanner) {
+            try { await html5QrScanner.clear(); } catch(e){}
+            html5QrScanner = null;
+        }
+        if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
         const btnTxt = document.getElementById('txtToggleScanner');
         if (btnTxt) btnTxt.textContent = "Mulai Kamera";
         
         const box = document.getElementById('startScanResultBox');
         if (box) {
+            const info = window.formatCameraErrorMessage ? window.formatCameraErrorMessage(err) : { title: "Kamera Tidak Tersedia", message: err.message || err };
             box.className = "p-6 rounded-2xl border-2 border-amber-300 bg-amber-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
             box.innerHTML = `
                 <span class="text-4xl mb-2">📷</span>
-                <h3 class="font-bold text-amber-900 text-base">Kamera Tidak Tersedia</h3>
-                <p class="text-xs text-amber-700 mt-1 max-w-xs">Izin kamera belum diberikan atau perangkat tidak memiliki kamera aktif. Anda tetap dapat menggunakan <strong>Scanner Tembak EPPOS / Input Manual</strong> di bawah!</p>
+                <h3 class="font-bold text-amber-900 text-base">${escapeHtml(info.title)}</h3>
+                <div class="text-xs text-amber-800 mt-2 max-w-sm text-left leading-relaxed">${info.message}</div>
+                <button type="button" onclick="window.startStartGateScanner()" class="mt-4 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition cursor-pointer">
+                    🔄 Coba Buka Kamera Lagi
+                </button>
             `;
         }
     }
 };
 
 window.stopStartGateScanner = async function() {
-    if (html5QrScanner && isScannerRunning) {
+    if (html5QrScanner) {
         try {
             await html5QrScanner.stop();
         } catch (e) {
             console.warn("Error stopping scanner:", e);
         }
-        isScannerRunning = false;
-        const btnTxt = document.getElementById('txtToggleScanner');
-        if (btnTxt) btnTxt.textContent = "Mulai Kamera";
+        try {
+            await html5QrScanner.clear();
+        } catch (e) {}
+        html5QrScanner = null;
     }
+    isScannerRunning = false;
+    if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
+    const btnTxt = document.getElementById('txtToggleScanner');
+    if (btnTxt) btnTxt.textContent = "Mulai Kamera";
 };
 
 window.toggleStartScanner = function() {
@@ -4232,4 +4421,10 @@ window.resetAllStartGateData = async function() {
         window.customAlert("Gagal mereset data start: " + err.message, "error");
     }
 };
+
+window.addEventListener('beforeunload', () => {
+    if (typeof window.releaseAllCameraTracks === 'function') {
+        window.releaseAllCameraTracks();
+    }
+});
 

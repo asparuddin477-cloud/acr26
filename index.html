@@ -891,11 +891,20 @@
                 </div>
 
                 <!-- Kamera Viewport Logistik (Toggled via button) -->
-                <div id="logistikScannerWrapper" class="hidden mb-5">
+                <div id="logistikScannerWrapper" class="hidden mb-5 p-4 bg-slate-50 rounded-3xl border border-indigo-100">
+                    <div class="flex items-center justify-between max-w-xs mx-auto mb-2">
+                        <span class="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Scanner Kamera Logistik
+                        </span>
+                        <button type="button" onclick="toggleLogistikScanner()" class="text-xs font-bold text-slate-500 hover:text-slate-800 px-2.5 py-1 bg-white rounded-lg border border-slate-200 shadow-xs cursor-pointer">
+                            Tutup ✕
+                        </button>
+                    </div>
                     <div class="max-w-xs mx-auto rounded-3xl overflow-hidden border-4 border-indigo-500 bg-slate-900 aspect-square relative shadow-xl">
                         <div id="logistikQrReader" class="w-full h-full"></div>
                     </div>
-                    <p class="text-[11px] text-slate-400 text-center mt-2">Arahkan kamera ke QR Code yang muncul di layar pelari / struk check-in.</p>
+                    <p class="text-[11px] text-slate-500 text-center mt-2">Arahkan kamera ke QR Code yang muncul di layar pelari / struk check-in.</p>
                 </div>
 
                 <form id="formLogistik" class="flex space-x-2">
