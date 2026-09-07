@@ -1805,30 +1805,116 @@ window.printLogistik = function() {
     printWin.document.close();
 };
 
-document.getElementById('formLogistik').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const kodeLogistik = document.getElementById('inputKodeLogistik').value.toUpperCase().trim();
-    let p = State.currentMasterList.find(x => x.kodeLogistik === kodeLogistik);
+window.findPesertaForLogistik = function(inputVal) {
+    const q = String(inputVal || '').toUpperCase().trim();
+    if (!q) return null;
+
+    // 1. Cek exact match kodeLogistik (cth: LOG-003)
+    let p = State.currentMasterList.find(x => x.kodeLogistik && x.kodeLogistik.toUpperCase() === q);
+    if (p) return p;
+
+    // 2. Jika user hanya ketik angka (cth: "3" atau "003")
+    const digits = q.replace(/\D/g, '');
+    if (digits) {
+        const formattedLog = 'LOG-' + digits.padStart(3, '0');
+        p = State.currentMasterList.find(x => x.kodeLogistik && x.kodeLogistik.toUpperCase() === formattedLog);
+        if (p) return p;
+    }
+
+    // 3. Fallback: cari berdasarkan nomor BIB atau kode pendaftaran
+    p = State.currentMasterList.find(x => {
+        const b = String(x.bibNumber || '').toUpperCase();
+        const k = String(x.kode || '').toUpperCase();
+        return (b && b === q) || (k && k === q);
+    });
+
+    return p;
+};
+
+window.openLogistikModalForPeserta = function(p) {
+    if (!p) return;
+    document.getElementById('logResNama').textContent = p.nama;
+    document.getElementById('logResDetail').textContent = (p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim() + ' | BIB: ' + (p.bibNumber || '-');
+    document.getElementById('logResJersey').textContent = p.jersey || '-';
+    document.getElementById('logResBib').textContent = p.bibNumber || '-';
+    document.getElementById('currentLogKode').value = p.kode; 
     
-    if(p) {
-        document.getElementById('logResNama').textContent = p.nama;
-        document.getElementById('logResDetail').textContent = p.kategori + ' | BIB: ' + p.bibNumber;
-        document.getElementById('logResJersey').textContent = p.jersey || '-';
-        document.getElementById('logResBib').textContent = p.bibNumber;
-        document.getElementById('currentLogKode').value = p.kode; 
-        
-        document.getElementById('chkJersey').checked = false;
-        document.getElementById('chkBib').checked = false;
-        document.getElementById('chkTas').checked = false;
-        
-        if (p.logistikDiambil) {
-            if (p.logistikDiambil.includes('Jersey')) document.getElementById('chkJersey').checked = true;
-            if (p.logistikDiambil.includes('Nomor BIB')) document.getElementById('chkBib').checked = true;
-            if (p.logistikDiambil.includes('Tas Serut')) document.getElementById('chkTas').checked = true;
+    document.getElementById('chkJersey').checked = false;
+    document.getElementById('chkBib').checked = false;
+    document.getElementById('chkTas').checked = false;
+    
+    if (p.logistikDiambil) {
+        if (p.logistikDiambil.includes('Jersey')) document.getElementById('chkJersey').checked = true;
+        if (p.logistikDiambil.includes('Nomor BIB')) document.getElementById('chkBib').checked = true;
+        if (p.logistikDiambil.includes('Tas Serut')) document.getElementById('chkTas').checked = true;
+    }
+    document.getElementById('logistikModal').classList.remove('hidden');
+};
+
+let logistikQrScanner = null;
+let isLogistikScannerActive = false;
+
+window.toggleLogistikScanner = async function() {
+    const wrapper = document.getElementById('logistikScannerWrapper');
+    const txtBtn = document.getElementById('txtLogistikScanner');
+    if (!wrapper) return;
+
+    if (isLogistikScannerActive) {
+        if (logistikQrScanner) {
+            try { await logistikQrScanner.stop(); } catch(e){}
+            logistikQrScanner = null;
         }
-        document.getElementById('logistikModal').classList.remove('hidden');
+        isLogistikScannerActive = false;
+        wrapper.classList.add('hidden');
+        if (txtBtn) txtBtn.textContent = '📷 Buka Kamera Scanner';
+        return;
+    }
+
+    wrapper.classList.remove('hidden');
+    if (txtBtn) txtBtn.textContent = '⏹️ Hentikan Kamera';
+    isLogistikScannerActive = true;
+
+    try {
+        if (typeof Html5Qrcode === 'undefined') {
+            throw new Error("Library pemindai kamera belum siap.");
+        }
+        logistikQrScanner = new Html5Qrcode("logistikQrReader");
+        await logistikQrScanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 220, height: 220 } },
+            async (decodedText) => {
+                if (decodedText) {
+                    if (typeof playBeep === 'function') playBeep(true);
+                    window.toggleLogistikScanner();
+                    document.getElementById('inputKodeLogistik').value = decodedText;
+                    const p = window.findPesertaForLogistik(decodedText);
+                    if (p) {
+                        window.openLogistikModalForPeserta(p);
+                    } else {
+                        await window.customAlert(`Kode "${escapeHtml(decodedText)}" tidak valid atau peserta belum melakukan check-in.`, 'warning', 'Tidak Ditemukan');
+                    }
+                }
+            },
+            () => {}
+        );
+    } catch (err) {
+        console.error("Gagal membuka kamera logistik:", err);
+        isLogistikScannerActive = false;
+        wrapper.classList.add('hidden');
+        if (txtBtn) txtBtn.textContent = '📷 Buka Kamera Scanner';
+        window.customAlert("Tidak dapat mengakses kamera: " + (err.message || err), "error");
+    }
+};
+
+document.getElementById('formLogistik').addEventListener('submit', async function(e) {
+    if (e) e.preventDefault();
+    const inputVal = document.getElementById('inputKodeLogistik').value.toUpperCase().trim();
+    let p = window.findPesertaForLogistik(inputVal);
+    
+    if (p) {
+        window.openLogistikModalForPeserta(p);
     } else { 
-        await window.customAlert('Kode Logistik tidak valid atau peserta belum melakukan Check-in.', 'error'); 
+        await window.customAlert(`Kode Logistik / BIB "${escapeHtml(inputVal)}" tidak ditemukan atau peserta belum melakukan Check-In di meja panitia.`, 'error', 'Tidak Ditemukan'); 
     }
 });
 
@@ -1850,24 +1936,9 @@ window.saveLogistikItems = async function() {
 
 window.editLogistik = function(kodeLogistik) {
     document.getElementById('inputKodeLogistik').value = kodeLogistik;
-    const p = State.currentMasterList.find(x => x.kodeLogistik === kodeLogistik);
+    const p = window.findPesertaForLogistik(kodeLogistik);
     if(p) {
-        document.getElementById('logResNama').textContent = p.nama;
-        document.getElementById('logResDetail').textContent = p.kategori + ' | BIB: ' + p.bibNumber;
-        document.getElementById('logResJersey').textContent = p.jersey || '-';
-        document.getElementById('logResBib').textContent = p.bibNumber;
-        document.getElementById('currentLogKode').value = p.kode; 
-        
-        document.getElementById('chkJersey').checked = false;
-        document.getElementById('chkBib').checked = false;
-        document.getElementById('chkTas').checked = false;
-        
-        if (p.logistikDiambil) {
-            if (p.logistikDiambil.includes('Jersey')) document.getElementById('chkJersey').checked = true;
-            if (p.logistikDiambil.includes('Nomor BIB')) document.getElementById('chkBib').checked = true;
-            if (p.logistikDiambil.includes('Tas Serut')) document.getElementById('chkTas').checked = true;
-        }
-        document.getElementById('logistikModal').classList.remove('hidden');
+        window.openLogistikModalForPeserta(p);
     }
 };
 

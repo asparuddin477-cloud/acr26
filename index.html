@@ -846,11 +846,27 @@
             </div>
 
             <div class="bg-white rounded-3xl shadow-sm border border-blue-200 p-6 mb-6">
-                <h3 class="text-lg font-bold text-slate-800 mb-2">Scan / Input Kode Logistik</h3>
-                <p class="text-xs text-slate-500 mb-4">Masukkan kode logistik (contoh: LOG-001) yang didapat peserta setelah check-in.</p>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 mb-4 border-b border-slate-100 gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Scan / Input Kode Logistik</h3>
+                        <p class="text-xs text-slate-500">Arahkan kamera ke QR Code Logistik peserta (atau ketik nomor/kode manual).</p>
+                    </div>
+                    <button type="button" onclick="toggleLogistikScanner()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-sm flex items-center gap-2 flex-shrink-0 cursor-pointer">
+                        <span id="txtLogistikScanner">📷 Buka Kamera Scanner</span>
+                    </button>
+                </div>
+
+                <!-- Kamera Viewport Logistik (Toggled via button) -->
+                <div id="logistikScannerWrapper" class="hidden mb-5">
+                    <div class="max-w-xs mx-auto rounded-3xl overflow-hidden border-4 border-indigo-500 bg-slate-900 aspect-square relative shadow-xl">
+                        <div id="logistikQrReader" class="w-full h-full"></div>
+                    </div>
+                    <p class="text-[11px] text-slate-400 text-center mt-2">Arahkan kamera ke QR Code yang muncul di layar pelari / struk check-in.</p>
+                </div>
+
                 <form id="formLogistik" class="flex space-x-2">
-                    <input type="text" id="inputKodeLogistik" required placeholder="LOG-XXX" class="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl font-mono uppercase outline-none focus:border-blue-500 text-sm">
-                    <button type="submit" class="bg-blue-600 text-white font-bold px-6 rounded-xl hover:bg-blue-700 active:scale-95 transition">Cari</button>
+                    <input type="text" id="inputKodeLogistik" required placeholder="Contoh: LOG-003, atau ketik 3, atau nomor BIB (U-1055)" class="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl font-mono uppercase outline-none focus:border-blue-500 text-xs sm:text-sm bg-slate-50 focus:bg-white">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 rounded-xl active:scale-95 transition shadow-sm cursor-pointer">Cari</button>
                 </form>
             </div>
             
