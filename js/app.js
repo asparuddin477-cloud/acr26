@@ -3080,7 +3080,7 @@ window.createBibCanvas = async function(p, customScale = 1.0) {
     } else if (katStr.includes('fun')) {
         categoryPrefix = 'F';
         templateSrc = 'images/bib_bg_funrun.jpg';
-        themeColor = '#b31b7a'; // Pink Fun Run
+        themeColor = '#e11d78'; // Bright Pink Fun Run
     } else if (katStr.includes('kid')) {
         categoryPrefix = 'K';
         templateSrc = 'images/bib_bg_kids.jpg';
@@ -3113,7 +3113,7 @@ window.createBibCanvas = async function(p, customScale = 1.0) {
         themeColor = '#1628d2';
     } else if (bibPrefix === 'F') {
         templateSrc = 'images/bib_bg_funrun.jpg';
-        themeColor = '#b31b7a';
+        themeColor = '#e11d78';
     } else if (bibPrefix === 'K') {
         templateSrc = 'images/bib_bg_kids.jpg';
         themeColor = '#f65f04';
@@ -3174,7 +3174,7 @@ window.createBibCanvas = async function(p, customScale = 1.0) {
 
     // Label di Bawah QR Code
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#6d28d9';
+    ctx.fillStyle = themeColor;
     ctx.font = `900 ${Math.round(18 * scale)}px "Montserrat", sans-serif`;
     ctx.fillText("SCAN START & FINISH", qrCardX + qrCardW / 2, qrCardY + Math.round(315 * scale));
 
