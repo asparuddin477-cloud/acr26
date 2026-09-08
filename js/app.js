@@ -3024,10 +3024,41 @@ async function getBibQrCodeElement(qrText, targetSize = 340) {
     });
 }
 
-// Render kanvas lembar BIB A5 Landscape resolusi tinggi (1754 x 1240 px)
+// Cache template latar belakang gambar resmi BIB (2750 x 1964 px)
+const bibTemplateCache = {};
+
+function getBibTemplateImage(src) {
+    if (bibTemplateCache[src] && bibTemplateCache[src].complete && bibTemplateCache[src].naturalWidth > 0) {
+        return Promise.resolve(bibTemplateCache[src]);
+    }
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            bibTemplateCache[src] = img;
+            resolve(img);
+        };
+        img.onerror = () => {
+            console.warn("Gagal memuat template gambar BIB:", src);
+            resolve(null);
+        };
+        img.src = src;
+    });
+}
+
+// Preload seluruh 4 template latar belakang secara non-blocking
+if (typeof window !== 'undefined') {
+    ['images/bib_bg_pelajar.jpg', 'images/bib_bg_funrun.jpg', 'images/bib_bg_kids.jpg', 'images/bib_bg_umum.jpg'].forEach(src => {
+        getBibTemplateImage(src);
+    });
+}
+
+// Render kanvas lembar BIB A5 Landscape resolusi tinggi (2750 x 1964 px)
 window.createBibCanvas = async function(p, customScale = 1.0) {
-    const W = Math.round(1754 * customScale);
-    const H = Math.round(1240 * customScale);
+    const baseW = 2750;
+    const baseH = 1964;
+    const W = Math.round(baseW * customScale);
+    const H = Math.round(baseH * customScale);
     const scale = customScale;
 
     const canvas = document.createElement('canvas');
@@ -3035,286 +3066,199 @@ window.createBibCanvas = async function(p, customScale = 1.0) {
     canvas.height = H;
     const ctx = canvas.getContext('2d');
 
-    // 1. Background putih bersih
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
-
-    // Skema Warna Kategori
+    // 1. Skema Kategori & Warna Sesuai Desain Template
+    // Biru: "P" Pelajar, Pink: "F" Fun Run, Orange: "K" Kids, Hijau: "U" Umum
     const katStr = (p.kategori || '').toLowerCase();
-    let katTitle = '5K UMUM';
-    let themeDark = '#064e3b';
-    let themeColor = '#047857'; // Emerald
-    let themeLight = '#ecfdf5';
-    let themeBorder = '#a7f3d0';
+    let categoryPrefix = 'U';
+    let templateSrc = 'images/bib_bg_umum.jpg';
+    let themeColor = '#046a20'; // Hijau Umum
 
     if (katStr.includes('pelajar')) {
-        katTitle = '5K PELAJAR';
-        themeDark = '#1e3a8a';
-        themeColor = '#1d4ed8'; // Blue
-        themeLight = '#eff6ff';
-        themeBorder = '#bfdbfe';
-    } else if (katStr.includes('kid')) {
-        katTitle = '2,5K KIDS';
-        themeDark = '#92400e';
-        themeColor = '#d97706'; // Amber / Orange
-        themeLight = '#fffbeb';
-        themeBorder = '#fde68a';
+        categoryPrefix = 'P';
+        templateSrc = 'images/bib_bg_pelajar.jpg';
+        themeColor = '#1628d2'; // Biru Pelajar
     } else if (katStr.includes('fun')) {
-        katTitle = '5K FUN RUN';
-        themeDark = '#5b21b6';
-        themeColor = '#7c3aed'; // Purple
-        themeLight = '#f5f3ff';
-        themeBorder = '#ddd6fe';
-    } else if (p.kategori) {
-        katTitle = String(p.kategori).replace(/\s*\([^)]*\)/g, '').trim().toUpperCase();
+        categoryPrefix = 'F';
+        templateSrc = 'images/bib_bg_funrun.jpg';
+        themeColor = '#b31b7a'; // Pink Fun Run
+    } else if (katStr.includes('kid')) {
+        categoryPrefix = 'K';
+        templateSrc = 'images/bib_bg_kids.jpg';
+        themeColor = '#f65f04'; // Orange Kids
+    } else {
+        categoryPrefix = 'U';
+        templateSrc = 'images/bib_bg_umum.jpg';
+        themeColor = '#046a20'; // Hijau Umum
     }
 
-    // Garis bingkai luar halus
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 4 * scale;
-    ctx.strokeRect(30 * scale, 30 * scale, W - 60 * scale, H - 60 * scale);
+    // Nomor BIB & Prefix
+    const bibRaw = String(p.bibNumber || p.kode || '1000').trim();
+    let bibPrefix = categoryPrefix;
+    let bibNum = bibRaw;
 
-    // 2. Tanda 4 Lubang Peniti (Crosshair Pin-Hole Guides)
-    const pinHoles = [
-        { x: 90 * scale, y: 80 * scale },
-        { x: W - 90 * scale, y: 80 * scale },
-        { x: 90 * scale, y: H - 80 * scale },
-        { x: W - 90 * scale, y: H - 80 * scale }
-    ];
-
-    pinHoles.forEach(pt => {
-        ctx.save();
-        ctx.strokeStyle = '#94a3b8';
-        ctx.lineWidth = 2.5 * scale;
-        ctx.setLineDash([4 * scale, 4 * scale]);
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 14 * scale, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.setLineDash([]);
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 1.5 * scale;
-        ctx.beginPath();
-        ctx.moveTo(pt.x - 20 * scale, pt.y);
-        ctx.lineTo(pt.x + 20 * scale, pt.y);
-        ctx.moveTo(pt.x, pt.y - 20 * scale);
-        ctx.lineTo(pt.x, pt.y + 20 * scale);
-        ctx.stroke();
-        ctx.restore();
-    });
-
-    // 3. Header Banner (Pita Kategori Atas)
-    const headerTop = 45 * scale;
-    const headerH = 175 * scale;
-    const headerLeft = 60 * scale;
-    const headerW = W - 120 * scale;
-
-    // Background Header Gradasi
-    const grad = ctx.createLinearGradient(headerLeft, headerTop, headerLeft + headerW, headerTop);
-    grad.addColorStop(0, themeDark);
-    grad.addColorStop(1, themeColor);
-    ctx.fillStyle = grad;
-    
-    // Rounded header top banner
-    roundRect(ctx, headerLeft, headerTop, headerW, headerH, 20 * scale);
-    ctx.fill();
-
-    // Gambar Logo ACR jika ada di halaman
-    const logoImg = document.querySelector('img[src="images/logo.png"]');
-    if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
-        ctx.drawImage(logoImg, headerLeft + 25 * scale, headerTop + 20 * scale, 135 * scale, 135 * scale);
+    const bibMatch = bibRaw.match(/^([A-Za-z]+)\s*-?\s*(\d+)$/);
+    if (bibMatch) {
+        bibPrefix = bibMatch[1].toUpperCase();
+        bibNum = bibMatch[2];
+    } else {
+        const digitMatch = bibRaw.match(/^(\d+)$/);
+        if (digitMatch) {
+            bibNum = digitMatch[1];
+        }
     }
 
-    // Teks Event Header
-    const textX = (logoImg && logoImg.complete && logoImg.naturalWidth > 0) ? headerLeft + 180 * scale : headerLeft + 40 * scale;
+    // Sinkronkan tema dan gambar latar belakang jika prefix eksplisit P, F, K, U
+    if (bibPrefix === 'P') {
+        templateSrc = 'images/bib_bg_pelajar.jpg';
+        themeColor = '#1628d2';
+    } else if (bibPrefix === 'F') {
+        templateSrc = 'images/bib_bg_funrun.jpg';
+        themeColor = '#b31b7a';
+    } else if (bibPrefix === 'K') {
+        templateSrc = 'images/bib_bg_kids.jpg';
+        themeColor = '#f65f04';
+    } else if (bibPrefix === 'U') {
+        templateSrc = 'images/bib_bg_umum.jpg';
+        themeColor = '#046a20';
+    }
+
+    const formattedBib = `${bibPrefix} - ${bibNum}`;
+
+    // 2. Gambar Background Template HD
+    const bgImg = await getBibTemplateImage(templateSrc);
+    if (bgImg && bgImg.naturalWidth > 0) {
+        ctx.drawImage(bgImg, 0, 0, W, H);
+    } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = themeColor;
+        ctx.fillRect(0, 0, W, Math.round(510 * scale));
+        ctx.fillRect(0, Math.round(1643 * scale), W, H - Math.round(1643 * scale));
+    }
+
+    // 3. QR Code Card Resmi (Sisi Kiri, sesuai contoh 7.jpg)
+    const qrCardX = Math.round(35 * scale);
+    const qrCardY = Math.round(760 * scale);
+    const qrCardW = Math.round(310 * scale);
+    const qrCardH = Math.round(375 * scale);
+    const qrCardRadius = Math.round(20 * scale);
+
+    ctx.save();
     ctx.fillStyle = '#ffffff';
-    ctx.font = `900 ${46 * scale}px "Montserrat", "Arial Black", sans-serif`;
-    ctx.fillText("ALPHA CHASE RUN 2026", textX, headerTop + 75 * scale);
-
-    ctx.fillStyle = '#e0f2fe';
-    ctx.font = `700 ${22 * scale}px sans-serif`;
-    ctx.fillText("OFFICIAL RACE BIB  •  27 SEPTEMBER 2026  •  BONTANG LESTARI", textX, headerTop + 125 * scale);
-
-    // Badge Kategori (Kanan Atas)
-    const badgeW = 420 * scale;
-    const badgeH = 76 * scale;
-    const badgeX = headerLeft + headerW - badgeW - 25 * scale;
-    const badgeY = headerTop + (headerH - badgeH) / 2;
-
-    ctx.fillStyle = '#ffffff';
-    roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 38 * scale);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
+    ctx.shadowBlur = Math.round(12 * scale);
+    ctx.shadowOffsetY = Math.round(4 * scale);
+    roundRect(ctx, qrCardX, qrCardY, qrCardW, qrCardH, qrCardRadius);
     ctx.fill();
+    ctx.restore();
 
-    ctx.fillStyle = themeColor;
-    ctx.font = `900 ${36 * scale}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText(katTitle, badgeX + badgeW / 2, badgeY + 52 * scale);
-    ctx.textAlign = 'left'; // reset
-
-    // 4. Area Konten Utama (BIB Number + Nama + Detail)
-    const contentLeft = 90 * scale;
-
-    // Label Official BIB
-    ctx.fillStyle = '#64748b';
-    ctx.font = `800 ${22 * scale}px sans-serif`;
-    ctx.fillText("NOMOR DADA RESMI (OFFICIAL BIB NUMBER)", contentLeft, 275 * scale);
-
-    // NOMOR BIB RAKSASA (Hero of the BIB)
-    const bibStr = String(p.bibNumber || p.kode || '1000').trim();
-    ctx.fillStyle = '#0f172a';
-    ctx.font = `900 ${220 * scale}px "Courier New", monospace, sans-serif`;
-    ctx.fillText(bibStr, contentLeft - 8 * scale, 480 * scale);
-
-    // Box Nama Pelari (BIB Name / Full Name)
-    const rawBibName = (p.bibName !== undefined && p.bibName !== null) ? String(p.bibName).trim() : '';
-    const rawNama = (p.nama !== undefined && p.nama !== null) ? String(p.nama).trim() : '';
-    const runnerBibName = (rawBibName ? rawBibName : rawNama).toUpperCase();
-    ctx.fillStyle = themeDark;
-    ctx.font = `900 ${60 * scale}px sans-serif`;
-    ctx.fillText(runnerBibName, contentLeft, 575 * scale);
-
-    // Nama Lengkap & Kode Registrasi
-    ctx.fillStyle = '#475569';
-    ctx.font = `700 ${28 * scale}px sans-serif`;
-    const subNameStr = (rawNama ? rawNama.toUpperCase() : '') + (p.kode ? `  •  ID: ${String(p.kode).trim()}` : '');
-    ctx.fillText(subNameStr, contentLeft, 625 * scale);
-
-    // 5. Box QR Code Resmi (Kanan Tengah)
-    const qrBoxW = 410 * scale;
-    const qrBoxH = 550 * scale;
-    const qrBoxX = W - qrBoxW - 85 * scale;
-    const qrBoxY = 245 * scale;
-
-    ctx.fillStyle = '#f8fafc';
     ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 3 * scale;
-    roundRect(ctx, qrBoxX, qrBoxY, qrBoxW, qrBoxH, 24 * scale);
-    ctx.fill();
+    ctx.lineWidth = Math.max(1, Math.round(2 * scale));
+    roundRect(ctx, qrCardX, qrCardY, qrCardW, qrCardH, qrCardRadius);
     ctx.stroke();
 
-    // Generate QR Code Element (Encodes bibNumber or kode)
+    // Konten QR Code (encodes bibNumber atau kode)
+    const qrTargetSize = Math.round(250 * scale);
     const qrCodeText = String(p.bibNumber || p.kode || '').trim();
-    const qrTargetSize = Math.round(330 * scale);
     const qrResult = await getBibQrCodeElement(qrCodeText, qrTargetSize);
 
     if (qrResult && qrResult.element) {
-        const qrDrawX = qrBoxX + (qrBoxW - qrTargetSize) / 2;
-        const qrDrawY = qrBoxY + 30 * scale;
+        const qrDrawX = qrCardX + Math.round((qrCardW - qrTargetSize) / 2);
+        const qrDrawY = qrCardY + Math.round(20 * scale);
         ctx.drawImage(qrResult.element, qrDrawX, qrDrawY, qrTargetSize, qrTargetSize);
         qrResult.cleanup();
     } else {
-        // Fallback jika QR offline gagal
         ctx.fillStyle = '#cbd5e1';
-        ctx.fillRect(qrBoxX + 40 * scale, qrBoxY + 40 * scale, 330 * scale, 330 * scale);
-        ctx.fillStyle = '#475569';
-        ctx.font = `700 ${20 * scale}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText("QR CODE RESMI", qrBoxX + qrBoxW / 2, qrBoxY + 200 * scale);
-        ctx.textAlign = 'left';
+        ctx.fillRect(qrCardX + Math.round(30 * scale), qrCardY + Math.round(30 * scale), qrTargetSize, qrTargetSize);
     }
 
     // Label di Bawah QR Code
     ctx.textAlign = 'center';
-    ctx.fillStyle = themeColor;
-    ctx.font = `900 ${25 * scale}px sans-serif`;
-    ctx.fillText("SCAN START & FINISH", qrBoxX + qrBoxW / 2, qrBoxY + 415 * scale);
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = `700 ${17 * scale}px sans-serif`;
-    ctx.fillText("VALIDASI GATE RESMI ACR 2026", qrBoxX + qrBoxW / 2, qrBoxY + 448 * scale);
-
-    ctx.fillStyle = '#0f172a';
-    ctx.font = `800 ${22 * scale}px monospace`;
-    ctx.fillText(qrCodeText, qrBoxX + qrBoxW / 2, qrBoxY + 488 * scale);
+    ctx.fillStyle = '#6d28d9';
+    ctx.font = `900 ${Math.round(18 * scale)}px "Montserrat", sans-serif`;
+    ctx.fillText("SCAN START & FINISH", qrCardX + qrCardW / 2, qrCardY + Math.round(315 * scale));
 
     ctx.fillStyle = '#94a3b8';
-    ctx.font = `600 ${14 * scale}px sans-serif`;
-    ctx.fillText("TIDAK BOLEH DILIPAT / DITUTUP", qrBoxX + qrBoxW / 2, qrBoxY + 520 * scale);
-    ctx.textAlign = 'left'; // reset
+    ctx.font = `700 ${Math.round(13 * scale)}px sans-serif`;
+    ctx.fillText("VALIDASI GATE ACR", qrCardX + qrCardW / 2, qrCardY + Math.round(342 * scale));
+    ctx.textAlign = 'left';
 
-    // 6. Metadata Pelari Cards (Gender, Jersey, Komunitas/Kota, Status)
-    const cardY = 675 * scale;
-    const cardH = 95 * scale;
-    const cardSpacing = 16 * scale;
-    const cardAreaW = qrBoxX - contentLeft - 30 * scale;
-    const singleCardW = (cardAreaW - (cardSpacing * 2)) / 3;
+    // 4. Nomor BIB Raksasa (Hitam Pekat Bold dengan Drop Shadow Halus)
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    let numFontSize = Math.round(620 * scale);
+    ctx.font = `900 ${numFontSize}px Impact, "Montserrat", "Arial Black", sans-serif`;
+    while (ctx.measureText(formattedBib).width > (2200 * scale) && numFontSize > (250 * scale)) {
+        numFontSize -= Math.round(15 * scale);
+        ctx.font = `900 ${numFontSize}px Impact, "Montserrat", "Arial Black", sans-serif`;
+    }
 
-    const rawGender = String(p.gender || '').toUpperCase();
-    const genderVal = (rawGender === 'L' || rawGender.includes('LAKI') ? 'LAKI-LAKI' : (rawGender === 'P' || rawGender.includes('PEREMPUAN') ? 'PEREMPUAN' : (rawGender || '-')));
-    const rawKomunitas = (p.komunitas !== undefined && p.komunitas !== null) ? String(p.komunitas).trim() : '';
-    const rawKota = (p.kota !== undefined && p.kota !== null) ? String(p.kota).trim() : 'BONTANG';
-    const cityVal = (rawKomunitas ? rawKomunitas : rawKota).toUpperCase();
+    const numCenterX = Math.round(1500 * scale);
+    const numCenterY = Math.round(1000 * scale);
 
-    const metadataCards = [
-        {
-            title: "GENDER",
-            val: genderVal,
-            icon: "👤"
-        },
-        {
-            title: "JERSEY OFFICIAL",
-            val: String(p.jersey || '-').toUpperCase(),
-            icon: "🎽"
-        },
-        {
-            title: "KOMUNITAS / KOTA",
-            val: cityVal,
-            icon: "📍"
-        }
-    ];
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.18)';
+    ctx.shadowBlur = Math.round(12 * scale);
+    ctx.shadowOffsetX = Math.round(4 * scale);
+    ctx.shadowOffsetY = Math.round(6 * scale);
+    ctx.fillStyle = '#000000';
+    ctx.fillText(formattedBib, numCenterX, numCenterY);
+    ctx.restore();
 
-    metadataCards.forEach((c, idx) => {
-        const cx = contentLeft + idx * (singleCardW + cardSpacing);
-        ctx.fillStyle = '#f8fafc';
-        ctx.strokeStyle = '#e2e8f0';
-        ctx.lineWidth = 2 * scale;
-        roundRect(ctx, cx, cardY, singleCardW, cardH, 16 * scale);
-        ctx.fill();
-        ctx.stroke();
+    // 5. Nama Pelari (Title Case, Berwarna Kategori, Tepat di Bawah Nomor BIB)
+    const rawBibName = (p.bibName !== undefined && p.bibName !== null) ? String(p.bibName).trim() : '';
+    const rawNama = (p.nama !== undefined && p.nama !== null) ? String(p.nama).trim() : '';
+    const nameToFormat = rawBibName || rawNama || 'Runner';
+    const runnerName = nameToFormat.toLowerCase().replace(/(?:^|\s|\/|-)\S/g, a => a.toUpperCase());
 
-        ctx.fillStyle = '#64748b';
-        ctx.font = `800 ${16 * scale}px sans-serif`;
-        ctx.fillText(c.title, cx + 18 * scale, cardY + 32 * scale);
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = `900 ${22 * scale}px sans-serif`;
-        // Truncate jika terlalu panjang
-        let valText = c.val;
-        if (valText.length > 18) valText = valText.substring(0, 16) + '...';
-        ctx.fillText(valText, cx + 18 * scale, cardY + 68 * scale);
-    });
-
-    // Box Peringatan & Aturan Singkat Penggunaan BIB
-    const ruleBoxY = 795 * scale;
-    const ruleBoxH = 90 * scale;
-    ctx.fillStyle = themeLight;
-    ctx.strokeStyle = themeBorder;
-    ctx.lineWidth = 2 * scale;
-    roundRect(ctx, contentLeft, ruleBoxY, cardAreaW, ruleBoxH, 16 * scale);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = themeDark;
-    ctx.font = `800 ${18 * scale}px sans-serif`;
-    ctx.fillText("PETUNJUK PENTING BAGI PESERTA:", contentLeft + 20 * scale, ruleBoxY + 34 * scale);
-
-    ctx.fillStyle = '#334155';
-    ctx.font = `600 ${16 * scale}px sans-serif`;
-    ctx.fillText("1. Pasang nomor BIB di bagian dada depan jersey menggunakan 4 peniti yang disediakan.", contentLeft + 20 * scale, ruleBoxY + 60 * scale);
-    ctx.fillText("2. Pastikan QR Code bersih & tidak terlipat untuk proses scanning di Gerbang Start & Finish.", contentLeft + 20 * scale, ruleBoxY + 80 * scale);
-
-    // 7. Footer Banner (Tagline & Hak Cipta Event)
-    const footerTop = H - 110 * scale;
-    const footerH = 65 * scale;
-    ctx.fillStyle = themeColor;
-    roundRect(ctx, headerLeft, footerTop, headerW, footerH, 14 * scale);
-    ctx.fill();
+    let nameFontSize = Math.round(160 * scale);
+    ctx.font = `900 ${nameFontSize}px "Montserrat", "Arial Black", sans-serif`;
+    while (ctx.measureText(runnerName).width > (2100 * scale) && nameFontSize > (60 * scale)) {
+        nameFontSize -= Math.round(5 * scale);
+        ctx.font = `900 ${nameFontSize}px "Montserrat", "Arial Black", sans-serif`;
+    }
 
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `900 ${22 * scale}px "Montserrat", sans-serif`;
-    ctx.fillText("★  STRENGTH  •  HONOR  •  BROTHERHOOD  ★  ALPHA CHASE RUN 2026 OFFICIAL  ★", W / 2, footerTop + 40 * scale);
-    ctx.textAlign = 'left'; // reset
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = themeColor;
+    ctx.fillText(runnerName, Math.round(1500 * scale), Math.round(1480 * scale));
+
+    // 6. Ukuran Baju Peserta di Atas Gambar Baju (Siluet T-shirt Putih di Banner Bawah)
+    // Titik pusat siluet baju: Center X = 1482, Center Y = 1811
+    let jerseySize = '';
+    let jerseyType = '';
+    if (p.jersey) {
+        const jStr = String(p.jersey).trim();
+        const match = jStr.match(/^([A-Za-z0-9]+)(?:\s*\(([^)]+)\))?/);
+        if (match) {
+            jerseySize = match[1].toUpperCase();
+            jerseyType = (match[2] || '').trim().toUpperCase();
+        } else {
+            jerseySize = jStr.toUpperCase();
+        }
+    }
+
+    if (jerseySize) {
+        ctx.fillStyle = themeColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const shirtX = Math.round(1482 * scale);
+
+        if (jerseyType) {
+            const szFont = Math.round((jerseySize.length > 2 ? 65 : 82) * scale);
+            ctx.font = `900 ${szFont}px "Montserrat", "Arial Black", sans-serif`;
+            ctx.fillText(jerseySize, shirtX, Math.round(1785 * scale));
+
+            const typeFont = Math.round(24 * scale);
+            ctx.font = `900 ${typeFont}px "Montserrat", sans-serif`;
+            ctx.fillText(jerseyType, shirtX, Math.round(1855 * scale));
+        } else {
+            const szFont = Math.round((jerseySize.length > 2 ? 72 : 88) * scale);
+            ctx.font = `900 ${szFont}px "Montserrat", "Arial Black", sans-serif`;
+            ctx.fillText(jerseySize, shirtX, Math.round(1815 * scale));
+        }
+    }
 
     return canvas;
 };
@@ -3504,7 +3448,7 @@ window.generateBatchBibPdf = async function() {
         });
 
         // Untuk batch ekspor, kita gunakan scale 0.8 (1403 x 992 px) agar render super cepat & file PDF ringan tanpa mengurangi ketajaman cetak A5
-        const batchScale = 0.8;
+        const batchScale = 0.5;
         const total = runners.length;
 
         let pagesAdded = 0;
