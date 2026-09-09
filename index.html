@@ -14,6 +14,10 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <!-- HTML5 QR Code Scanner -->
     <script src="js/html5-qrcode.min.js"></script>
+    <!-- Google Fonts: Montserrat -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/custom.css">
     <link rel="icon" type="image/png" href="images/logo.png">
@@ -465,54 +469,45 @@
                         </div>
                     </div>
 
-                    <!-- Center Display: Giant Digital LED BIB Card (FULL WIDTH & EXTRA LARGE TEXT) -->
-                    <div class="relative z-10 my-auto w-full">
-                        <div class="w-full bg-white/95 backdrop-blur-xl rounded-3xl p-6 sm:p-10 md:p-12 text-slate-800 shadow-2xl border-2 border-white text-center transform transition">
+                    <!-- Center Display: Official Graphic BIB Canvas/Image (Identik 100% dengan Desain BIB Cetak) -->
+                    <div class="relative z-10 my-auto w-full flex flex-col items-center justify-center">
+                        <div class="relative w-full max-w-4xl mx-auto rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 sm:border-4 border-white/30 bg-white group">
+                            <!-- Live Rendered Official BIB Image -->
+                            <img id="bibLiveImage" src="" alt="Nomor BIB Resmi" class="w-full h-auto block select-none shadow-inner" />
                             
-                            <!-- Category Badge (Besar & Jelas) -->
-                            <div class="inline-flex items-center gap-2.5 px-6 py-2 sm:px-8 sm:py-2.5 rounded-full bg-slate-900 text-cyan-400 font-black text-sm sm:text-xl md:text-2xl tracking-widest uppercase shadow-md mb-2 sm:mb-4">
-                                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-                                <span id="dispBibKategori">5K PELAJAR</span>
+                            <!-- Live Loading Spinner -->
+                            <div id="bibLiveLoading" class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+                                <div class="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+                                <p class="font-bold text-xs sm:text-sm tracking-widest uppercase">Menyiapkan Tampilan BIB Resmi...</p>
                             </div>
+                        </div>
 
-                            <!-- Giant BIB Number (Raksasa & Jelas untuk Foto) -->
-                            <div class="my-2 sm:my-4">
-                                <span class="text-xs sm:text-base md:text-lg font-extrabold text-slate-400 uppercase tracking-widest block mb-1 sm:mb-2">OFFICIAL BIB NUMBER</span>
-                                <h1 id="dispBibNumber" class="text-7xl sm:text-9xl md:text-[8.5rem] lg:text-[10rem] font-black tracking-tight text-blue-700 drop-shadow font-mono leading-none my-2 sm:my-4">
-                                    31470
-                                </h1>
-                            </div>
+                        <!-- Live Status & Detail Pills (Di Bawah Gambar BIB) -->
+                        <div class="flex flex-wrap justify-center items-center gap-2 sm:gap-3 mt-4 sm:mt-6 text-xs sm:text-sm font-bold">
+                            <span class="px-3.5 py-1.5 sm:px-5 sm:py-2 bg-emerald-500/20 backdrop-blur-md text-emerald-300 rounded-xl border border-emerald-400/30 flex items-center gap-1.5 shadow-sm">
+                                <span>✅ Status:</span>
+                                <strong class="text-white font-extrabold">Checked-In &amp; Verified</strong>
+                            </span>
+                            <span class="px-3.5 py-1.5 sm:px-5 sm:py-2 bg-white/15 backdrop-blur-md text-cyan-200 rounded-xl border border-white/20 flex items-center gap-1.5 shadow-sm">
+                                <span>Kategori:</span>
+                                <strong id="dispBibKategori" class="text-white font-black">5K PELAJAR</strong>
+                            </span>
+                            <span class="px-3.5 py-1.5 sm:px-5 sm:py-2 bg-white/15 backdrop-blur-md text-cyan-200 rounded-xl border border-white/20 flex items-center gap-1.5 shadow-sm">
+                                <span>👕 Jersey:</span>
+                                <strong id="dispBibJersey" class="text-white font-black">-</strong>
+                            </span>
+                            <span class="px-3.5 py-1.5 sm:px-5 sm:py-2 bg-white/15 backdrop-blur-md text-cyan-200 rounded-xl border border-white/20 flex items-center gap-1.5 shadow-sm">
+                                <span>Kode:</span>
+                                <strong id="dispBibKode" class="font-mono text-white font-black">-</strong>
+                            </span>
+                        </div>
 
-                            <!-- Runner Name & BIB Name (Ekstra Besar) -->
-                            <div class="border-t-2 border-slate-100 pt-4 sm:pt-6 mt-3 sm:mt-4">
-                                <h2 id="dispBibName" class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black uppercase text-slate-900 tracking-wide leading-tight">
-                                    RAFI PACE
-                                </h2>
-                                <p id="dispNamaLengkap" class="text-base sm:text-2xl md:text-3xl text-slate-600 font-bold mt-1 sm:mt-2">
-                                    Muhammad Rafi
-                                </p>
-                            </div>
-
-                            <!-- Extra Meta Pill: Jersey & Status (Lebih Besar & Rapi) -->
-                            <div class="flex flex-wrap justify-center items-center gap-3 sm:gap-4 mt-6 pt-5 border-t border-slate-200 text-xs sm:text-base md:text-lg font-bold">
-                                <span class="px-4 py-2 sm:px-6 sm:py-2.5 bg-blue-50 text-blue-700 rounded-xl border border-blue-200 flex items-center gap-2 shadow-sm">
-                                    <span>👕 Jersey:</span>
-                                    <strong id="dispBibJersey" class="text-blue-950 font-black">L (Pendek)</strong>
-                                </span>
-
-                                <span class="px-4 py-2 sm:px-6 sm:py-2.5 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-200 flex items-center gap-2 shadow-sm">
-                                    <span>Kode:</span>
-                                    <strong id="dispBibKode" class="font-mono text-indigo-950 font-black">RUN-XXXXXX</strong>
-                                </span>
-
-                            <!-- Official QR Code for Start Gate Scan -->
-                            <div class="mt-6 pt-5 border-t border-slate-200 flex flex-col items-center justify-center">
-                                <div class="p-3 bg-white rounded-2xl shadow-lg border-2 border-indigo-100 inline-flex flex-col items-center">
-                                    <img id="dispBibQrCode" src="" alt="QR Code Start" class="w-28 h-28 sm:w-36 sm:h-36 object-contain">
-                                    <span class="text-[10px] sm:text-xs font-mono font-black text-indigo-700 mt-1 uppercase tracking-wider">OFFICIAL START QR</span>
-                                </div>
-                                <p class="text-[11px] sm:text-xs text-slate-400 mt-2 font-medium">Tunjukkan QR ini ke petugas saat berada di garis Start</p>
-                            </div>
+                        <!-- Hidden elements for backward-compatibility with existing scripts & fallbacks -->
+                        <div class="hidden">
+                            <span id="dispBibNumber">-</span>
+                            <span id="dispBibName">-</span>
+                            <p id="dispNamaLengkap">-</p>
+                            <img id="dispBibQrCode" src="" alt="QR Code">
                         </div>
                     </div>
 
@@ -1301,8 +1296,12 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
-                <div class="p-4 overflow-y-auto flex-1 flex justify-center items-center bg-slate-800 min-h-[30vh]">
-                    <img id="verifyImage" src="" alt="Bukti Transfer" class="max-w-full max-h-[50vh] object-contain rounded shadow-md">
+                <div class="p-4 overflow-y-auto flex-1 flex flex-col justify-center items-center bg-slate-900 min-h-[35vh]">
+                    <img id="verifyImage" src="" alt="Bukti Transfer" onclick="window.openVerifyImageFull()" title="Klik untuk memperbesar bukti transfer" class="max-w-full max-h-[60vh] object-contain rounded shadow-lg transition-transform duration-200 hover:scale-[1.01] cursor-pointer">
+                    <button type="button" onclick="window.openVerifyImageFull()" class="mt-3 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700 shadow-sm cursor-pointer">
+                        <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        <span>🔍 Buka Gambar Penuh (Zoom HD)</span>
+                    </button>
                 </div>
                 <div class="p-5 border-t border-slate-100 bg-white space-y-3">
                     <p id="verifyQuestionText" class="text-sm text-center text-slate-600 font-medium">Apakah bukti transfer ini sudah sesuai (Lunas)?</p>
@@ -1514,7 +1513,7 @@
     <script src="js/seed-data.js"></script>
     <script src="js/xlsx.full.min.js"></script>
     <script src="js/html2canvas.min.js"></script>
-    <script src="js/qrcode.min.js?v=20260906_2"></script>
-    <script src="js/app.js?v=20260906_2"></script>
+    <script src="js/qrcode.min.js?v=20260908_1"></script>
+    <script src="js/app.js?v=20260909_2"></script>
 </body>
 </html>

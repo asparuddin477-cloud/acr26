@@ -26,17 +26,43 @@ const State = {
         jerseySizes: 'XS\nS\nM\nL\nXL\nXXL\nXXXL',
         diskonKuota: 100,
         diskonNominal: 25000,
-        gambar: '[]',
-        bgHero: '',
-        bgHeroOpacity: '10',
-        benefits: '[]',
+        gambar: JSON.stringify([
+            'assets/gallery/gallery_1.png',
+            'assets/gallery/gallery_2.png',
+            'assets/gallery/gallery_3.png',
+            'assets/gallery/gallery_4.png'
+        ]),
+        bgHero: 'assets/bg_hero.png',
+        bgHeroOpacity: '15',
+        benefits: JSON.stringify([
+            'assets/benefits/benefit_1.png',
+            'assets/benefits/benefit_2.png',
+            'assets/benefits/benefit_3.png',
+            'assets/benefits/benefit_4.png'
+        ]),
         mapEmbed: '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d31918.522038388972!2d117.42808531562503!3d0.07102560000000266!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x320a0c03f1a357d7%3A0xc099a0e0689e519!2sDHBS%20Bontang%20Lestari!5e0!3m2!1sid!2sid!4v1779038544755!5m2!1sid!2sid" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
     }
 };
 
-let uploadedImages = [];
-let uploadedBgHero = '';
-let uploadedBenefits = [];
+const DEFAULT_GALLERY = [
+    'assets/gallery/gallery_1.png',
+    'assets/gallery/gallery_2.png',
+    'assets/gallery/gallery_3.png',
+    'assets/gallery/gallery_4.png'
+];
+
+const DEFAULT_BENEFITS = [
+    'assets/benefits/benefit_1.png',
+    'assets/benefits/benefit_2.png',
+    'assets/benefits/benefit_3.png',
+    'assets/benefits/benefit_4.png'
+];
+
+const DEFAULT_BG_HERO = 'assets/bg_hero.png';
+
+let uploadedImages = DEFAULT_GALLERY.slice();
+let uploadedBgHero = DEFAULT_BG_HERO;
+let uploadedBenefits = DEFAULT_BENEFITS.slice();
 let paymentInterval = null;
 
 // =====================================================================
@@ -117,6 +143,7 @@ function setupFirestoreListeners() {
         }
     }, (error) => {
         console.error("Error pada snapshot settings:", error);
+        loadLocalFallbackData();
     });
 
     // 2. Listener Real-Time Data Peserta
@@ -485,12 +512,12 @@ function applySettingsToUI() {
     document.getElementById('infoTglTutup').textContent = formatDisplayDate(s.tglTutup) || 'TBA';
     document.getElementById('btnWaPanitia').href = `https://wa.me/${s.waPanitia || '6281234567890'}`;
 
-    uploadedBgHero = s.bgHero && s.bgHero.trim() !== '' ? s.bgHero : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 384 512'%3E%3Cpath fill='%23ffffff' d='M272 96a48 48 0 1 0 0-96 48 48 0 1 0 0 96zM113.7 264.4c-8.7-10.9-24.8-12.7-35.7-4s-12.7 24.8-4 35.7L136 374.3V480c0 17.7 14.3 32 32 32s32-14.3 32-32V384c0-26.4-16.2-50.1-40.8-59.8L113.7 264.4zM245.8 174.9c-15.5-13.4-38.3-15.5-55.9-5.1L126.5 207c-15.2 8.9-20.3 28.5-11.4 43.7s28.5 20.3 43.7 11.4l50.2-29.4 33 46.1c11.3 15.8 32.1 20.7 49 11.6l81.6-43.5c15.5-8.3 21.4-27.5 13.1-43.1s-27.5-21.4-43.1-13.1L277 220 245.8 174.9z'/%3E%3C/svg%3E";
+    uploadedBgHero = (s.bgHero && s.bgHero.trim() !== '') ? s.bgHero : DEFAULT_BG_HERO;
     const heroOverlay = document.getElementById('heroBgOverlay');
     if (uploadedBgHero) { 
         heroOverlay.style.backgroundImage = `url('${uploadedBgHero}')`; 
         heroOverlay.style.display = 'block'; 
-        heroOverlay.style.opacity = (s.bgHeroOpacity || '35') / 100;
+        heroOverlay.style.opacity = (s.bgHeroOpacity || '20') / 100;
     } else { 
         heroOverlay.style.display = 'none'; 
     }
@@ -507,15 +534,28 @@ function applySettingsToUI() {
         mapContainer.innerHTML = '';
     }
 
-    try { uploadedImages = JSON.parse(s.gambar || "[]"); if(!Array.isArray(uploadedImages)) uploadedImages = []; } catch(e){ uploadedImages = []; }
-    try { uploadedBenefits = JSON.parse(s.benefits || "[]"); if(!Array.isArray(uploadedBenefits)) uploadedBenefits = []; } catch(e){ uploadedBenefits = []; }
+    try { 
+        uploadedImages = JSON.parse(s.gambar || "[]"); 
+        if(!Array.isArray(uploadedImages)) uploadedImages = []; 
+    } catch(e){ uploadedImages = []; }
+    if (uploadedImages.length === 0) {
+        uploadedImages = DEFAULT_GALLERY.slice();
+    }
+
+    try { 
+        uploadedBenefits = JSON.parse(s.benefits || "[]"); 
+        if(!Array.isArray(uploadedBenefits)) uploadedBenefits = []; 
+    } catch(e){ uploadedBenefits = []; }
+    if (uploadedBenefits.length === 0) {
+        uploadedBenefits = DEFAULT_BENEFITS.slice();
+    }
 
     const benefitContainer = document.getElementById('infoBenefits');
     benefitContainer.innerHTML = '';
     if(uploadedBenefits.length > 0) {
         document.getElementById('infoBenefitsWrapper').classList.remove('hidden');
         uploadedBenefits.forEach(img => { 
-            benefitContainer.innerHTML += `<div class="min-w-[220px] w-[220px] sm:min-w-[280px] sm:w-[280px] flex-shrink-0 bg-white rounded-2xl overflow-hidden shadow border border-slate-100 snap-center"><img src="${img}" class="w-full h-40 sm:h-48 object-cover block"></div>`; 
+            benefitContainer.innerHTML += `<div class="min-w-[220px] w-[220px] sm:min-w-[280px] sm:w-[280px] flex-shrink-0 bg-white rounded-2xl overflow-hidden shadow border border-slate-100 snap-center"><img src="${img}" class="w-full h-40 sm:h-48 object-cover block bg-slate-50" loading="lazy"></div>`; 
         });
     } else { 
         document.getElementById('infoBenefitsWrapper').classList.add('hidden'); 
@@ -525,8 +565,15 @@ function applySettingsToUI() {
     gallery.innerHTML = '';
     if(uploadedImages.length > 0) {
         gallery.classList.remove('hidden');
-        uploadedImages.forEach(img => { 
-            gallery.innerHTML += `<div class="w-full bg-slate-200 sm:rounded-2xl overflow-hidden shadow-sm"><img src="${img}" class="w-full h-auto object-cover block"></div>`; 
+        uploadedImages.forEach((img, idx) => { 
+            const isChart = idx === 1 || idx === 2;
+            const containerClass = isChart
+                ? "w-full max-w-3xl mx-auto bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-slate-100 p-2 sm:p-4 flex justify-center items-center"
+                : "w-full max-w-2xl mx-auto bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-slate-100 p-2 sm:p-4 flex justify-center items-center";
+            gallery.innerHTML += `
+                <div class="${containerClass}">
+                    <img src="${img}" alt="Info ACR 2026 - ${idx + 1}" class="w-full h-auto max-h-[90vh] object-contain block mx-auto rounded-xl transition duration-200 hover:shadow" loading="lazy">
+                </div>`; 
         });
     } else { 
         gallery.classList.add('hidden'); 
@@ -544,7 +591,7 @@ function applySettingsToUI() {
     if (document.getElementById('setDiskonKuota')) document.getElementById('setDiskonKuota').value = s.diskonKuota || '';
     if (document.getElementById('setDiskonNominal')) document.getElementById('setDiskonNominal').value = s.diskonNominal || '';
     document.getElementById('setMapEmbed').value = s.mapEmbed || '';
-    document.getElementById('setBgOpacity').value = s.bgHeroOpacity || '35';
+    document.getElementById('setBgOpacity').value = s.bgHeroOpacity || '15';
     document.getElementById('setAturan').value = s.aturan || '';
     
     const aturanList = document.getElementById('infoAturanList');
@@ -585,8 +632,75 @@ function applySettingsToUI() {
 }
 
 // =====================================================================
-// UPLOAD & KOMPRESI GAMBAR
+// UPLOAD & KOMPRESI GAMBAR BERKUALITAS TINGGI (TIDAK BURAM)
 // =====================================================================
+
+// Khusus Bukti Transfer: Resolusi tinggi (1200x1600), smoothing tajam, teks struk jelas terbaca
+function compressBuktiTransfer(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                // Resolusi tinggi agar teks struk ATM/m-banking terbaca jelas tanpa buram
+                const MAX_WIDTH = 1200;
+                const MAX_HEIGHT = 1600;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height = Math.round(height * (MAX_WIDTH / width));
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width = Math.round(width * (MAX_HEIGHT / height));
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                // Smoothing berkualitas tinggi untuk mencegah blur dan pixelation
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Kualitas JPEG tajam (0.88), ukuran dijaga dalam batas aman Firestore (< 350 KB)
+                let quality = 0.88;
+                let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+                while (dataUrl.length > 340000 && quality > 0.72) {
+                    quality -= 0.04;
+                    dataUrl = canvas.toDataURL('image/jpeg', quality);
+                }
+
+                // Jika masih besar, scaling turun sedikit (0.88x) dengan kualitas tetap tajam
+                if (dataUrl.length > 350000) {
+                    const w = Math.round(width * 0.88);
+                    const h = Math.round(height * 0.88);
+                    canvas.width = w;
+                    canvas.height = h;
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, w, h);
+                    dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                }
+
+                resolve(dataUrl);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 function compressImage(file, isHero = false) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -594,37 +708,30 @@ function compressImage(file, isHero = false) {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = isHero ? 600 : 700;  
-                const MAX_HEIGHT = isHero ? 600 : 700;
+                const MAX_WIDTH = isHero ? 900 : 1000;  
+                const MAX_HEIGHT = isHero ? 900 : 1000;
                 let width = img.width;
                 let height = img.height;
                 
                 if (width > height) {
-                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    if (width > MAX_WIDTH) { height = Math.round(height * (MAX_WIDTH / width)); width = MAX_WIDTH; }
                 } else {
-                    if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    if (height > MAX_HEIGHT) { width = Math.round(width * (MAX_HEIGHT / height)); height = MAX_HEIGHT; }
                 }
                 
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, width, height);
                 
                 let quality = 0.85;
                 let dataUrl = canvas.toDataURL('image/jpeg', quality);
 
-                while (dataUrl.length > 50000 && quality > 0.3) {
-                    quality -= 0.15;
+                while (dataUrl.length > 200000 && quality > 0.65) {
+                    quality -= 0.05;
                     dataUrl = canvas.toDataURL('image/jpeg', quality);
-                }
-
-                if (dataUrl.length > 50000) {
-                    const w = width * 0.6;
-                    const h = height * 0.6;
-                    canvas.width = w;
-                    canvas.height = h;
-                    ctx.drawImage(img, 0, 0, w, h);
-                    dataUrl = canvas.toDataURL('image/jpeg', 0.6);
                 }
                 
                 resolve(dataUrl); 
@@ -1035,12 +1142,12 @@ document.getElementById('formBayar').addEventListener('submit', async function(e
     let base64Bukti = "";
     
     if (fileInput.files.length > 0) {
-        window.showLoading(true, "Mengompresi Bukti...");
+        window.showLoading(true, "Mengompresi Bukti Transfer Berkualitas Tinggi...");
         try { 
-            base64Bukti = await compressImage(fileInput.files[0]); 
+            base64Bukti = await compressBuktiTransfer(fileInput.files[0]); 
         } catch(err) { 
             window.showLoading(false); 
-            await window.customAlert("Gagal memproses gambar bukti transfer.", "error"); 
+            await window.customAlert("Gagal memproses gambar bukti transfer: " + (err.message || err), "error"); 
             return; 
         }
     } else { 
@@ -1353,6 +1460,17 @@ window.openVerifyModal = function(kode, mode = 'verify') {
 };
 
 window.closeVerifyModal = function() { document.getElementById('verifyModal').classList.add('hidden'); };
+
+window.openVerifyImageFull = function() {
+    const img = document.getElementById('verifyImage');
+    if (img && img.src && !img.src.startsWith('data:image/svg')) {
+        const w = window.open("");
+        if (w) {
+            w.document.write(`<!DOCTYPE html><html><head><title>Bukti Pembayaran Penuh - ACR 2026</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{margin:0;background:#0f172a;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:16px;box-sizing:border-box;}img{max-width:100%;height:auto;border-radius:12px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);image-rendering:-webkit-optimize-contrast;}</style></head><body><img src="${img.src}" alt="Bukti Pembayaran Penuh"></body></html>`);
+            w.document.close();
+        }
+    }
+};
 
 window.verifyPeserta = async function(kode) {
     try { 
@@ -2532,6 +2650,7 @@ function loadSeedDataIfEmpty() {
             const s = Object.assign({}, data.settings);
             if (s.waPanitia === '#ERROR!' || !s.waPanitia) s.waPanitia = '6281234567890';
             State.settings = Object.assign({}, State.settings, s);
+            applySettingsToUI();
         }
         return;
     }
@@ -2545,6 +2664,7 @@ function loadSeedDataIfEmpty() {
                     }
                     if (data.settings) {
                         State.settings = Object.assign({}, State.settings, data.settings);
+                        applySettingsToUI();
                     }
                     refreshActivePageUI();
                 })
@@ -2791,7 +2911,7 @@ window.submitBibSearch = function() {
     }
 };
 
-window.showBibScreen = function(kode) {
+window.showBibScreen = async function(kode) {
     const p = State.currentMasterList.find(x => x.kode === kode);
     if (!p) return;
 
@@ -2856,12 +2976,18 @@ window.showBibScreen = function(kode) {
     const namaSafe = (p.nama !== undefined && p.nama !== null) ? String(p.nama).trim() : '';
     const displayBibName = (bibNameSafe ? bibNameSafe : namaSafe).toUpperCase();
 
-    document.getElementById('dispBibKategori').textContent = kategoriDisplay;
-    document.getElementById('dispBibNumber').textContent = bibDisplay;
-    document.getElementById('dispBibName').textContent = displayBibName;
-    document.getElementById('dispNamaLengkap').textContent = namaSafe.toUpperCase();
-    document.getElementById('dispBibJersey').textContent = String(p.jersey || '-');
-    document.getElementById('dispBibKode').textContent = String(p.kode || '');
+    const elKat = document.getElementById('dispBibKategori');
+    if (elKat) elKat.textContent = kategoriDisplay;
+    const elNum = document.getElementById('dispBibNumber');
+    if (elNum) elNum.textContent = bibDisplay;
+    const elName = document.getElementById('dispBibName');
+    if (elName) elName.textContent = displayBibName;
+    const elNamaLengkap = document.getElementById('dispNamaLengkap');
+    if (elNamaLengkap) elNamaLengkap.textContent = namaSafe.toUpperCase();
+    const elJersey = document.getElementById('dispBibJersey');
+    if (elJersey) elJersey.textContent = String(p.jersey || '-');
+    const elKode = document.getElementById('dispBibKode');
+    if (elKode) elKode.textContent = String(p.kode || '');
 
     const statusBadge = document.getElementById('dispBibStatusBadge');
     if (statusBadge) {
@@ -2881,6 +3007,25 @@ window.showBibScreen = function(kode) {
     if (searchContainer) searchContainer.classList.add('hidden');
 
     wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Render Gambar BIB Resmi HD yang identik 100% dengan lembar cetak
+    const liveImg = document.getElementById('bibLiveImage');
+    const liveLoader = document.getElementById('bibLiveLoading');
+    if (liveLoader) liveLoader.classList.remove('hidden');
+
+    try {
+        if (typeof window.createBibCanvas === 'function') {
+            const canvas = await window.createBibCanvas(p, 1.0);
+            if (liveImg) {
+                liveImg.src = canvas.toDataURL('image/png');
+                liveImg.alt = `Official BIB ${bibDisplay} - ${displayBibName}`;
+            }
+        }
+    } catch (err) {
+        console.error("Gagal merender live BIB:", err);
+    } finally {
+        if (liveLoader) liveLoader.classList.add('hidden');
+    }
 };
 
 window.resetBibSearch = function() {
@@ -2891,6 +3036,9 @@ window.resetBibSearch = function() {
 
     const wrapper = document.getElementById('bibDisplayWrapper');
     if (wrapper) wrapper.classList.add('hidden');
+
+    const liveImg = document.getElementById('bibLiveImage');
+    if (liveImg) liveImg.src = '';
 
     const input = document.getElementById('bibSearchInput');
     if (input) {
