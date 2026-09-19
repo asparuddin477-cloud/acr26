@@ -1969,13 +1969,30 @@ window.printLogistik = function() {
             margin: 0;
         }
         @media print {
+            .no-print {
+                display: none !important;
+            }
             html, body {
-                width: 48mm !important;
+                width: 38mm !important;
                 margin: 0 auto !important;
                 padding: 1mm 0 !important;
                 background: #fff !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+            .ticket {
+                width: 38mm !important;
+                margin: 0 auto !important;
+            }
+            /* Kompensasi regangan 2x printer POS-58: tinggi dibuat 14mm agar hasil cetak fisik menjadi KOTAK SEMPURNA 28mm x 28mm */
+            .qr-pos58 {
+                width: 28mm !important;
+                height: 14mm !important;
+                object-fit: fill !important;
+            }
+            .qr-normal {
+                width: 28mm !important;
+                height: 28mm !important;
             }
         }
         * {
@@ -1986,15 +2003,52 @@ window.printLogistik = function() {
         body {
             font-family: Arial, Helvetica, sans-serif;
             color: #000;
-            background: #fff;
-            width: 48mm;
+            background: #f1f5f9;
             margin: 0 auto;
-            padding: 2mm 1mm;
+            padding: 10px;
             -webkit-font-smoothing: antialiased;
         }
-        .ticket {
-            width: 100%;
+        .no-print {
+            max-width: 320px;
+            margin: 0 auto 10px auto;
+            background: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
             text-align: center;
+            font-size: 11px;
+        }
+        .btn-print {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 6px;
+            font-size: 12px;
+        }
+        .btn-print:hover {
+            background: #1d4ed8;
+        }
+        .toggle-mode {
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #334155;
+            cursor: pointer;
+        }
+        .ticket {
+            width: 38mm;
+            margin: 0 auto;
+            text-align: center;
+            background: #fff;
+            padding: 4px 2px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
         }
         .header {
             border-bottom: 1px dashed #000;
@@ -2002,18 +2056,18 @@ window.printLogistik = function() {
             margin-bottom: 4px;
         }
         .event-title {
-            font-size: 9.5px;
+            font-size: 8px;
             font-weight: 900;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
             text-transform: uppercase;
-            line-height: 1.2;
+            line-height: 1.15;
         }
         .doc-title {
-            font-size: 7.5px;
+            font-size: 6.5px;
             font-weight: bold;
-            color: #333;
+            color: #222;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.3px;
             margin-top: 1px;
         }
         .qr-section {
@@ -2021,24 +2075,31 @@ window.printLogistik = function() {
             text-align: center;
         }
         .qr-section img {
-            width: 30mm;
-            height: 30mm;
             display: block;
             margin: 0 auto;
             image-rendering: pixelated;
         }
+        .qr-pos58 {
+            width: 28mm;
+            height: 14mm;
+            object-fit: fill;
+        }
+        .qr-normal {
+            width: 28mm;
+            height: 28mm;
+        }
         .log-code-label {
-            font-size: 7px;
+            font-size: 6.5px;
             font-weight: bold;
-            color: #444;
-            letter-spacing: 0.8px;
+            color: #333;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
             margin-top: 2px;
         }
         .log-code {
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 900;
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
             line-height: 1.1;
             font-family: monospace;
             margin-top: 1px;
@@ -2049,23 +2110,23 @@ window.printLogistik = function() {
             padding: 3px 0;
             margin: 4px 0;
             text-align: left;
-            font-size: 8px;
+            font-size: 7.5px;
         }
-        .info-row {
+        .info-item {
             display: flex;
             justify-content: space-between;
             align-items: baseline;
             margin-bottom: 2px;
             line-height: 1.2;
         }
-        .info-row:last-child {
+        .info-item:last-child {
             margin-bottom: 0;
         }
         .info-label {
             font-weight: bold;
-            width: 15mm;
+            width: 12mm;
             flex-shrink: 0;
-            color: #333;
+            color: #222;
         }
         .info-value {
             font-weight: bold;
@@ -2073,41 +2134,61 @@ window.printLogistik = function() {
             word-break: break-word;
             flex: 1;
         }
-        .bib-highlight {
-            font-size: 10.5px;
+        .bib-val {
+            font-size: 10px;
             font-family: monospace;
         }
         .footer {
-            padding-top: 3px;
+            padding-top: 2px;
             text-align: center;
         }
         .footer p {
-            font-size: 7px;
-            color: #444;
+            font-size: 6.5px;
+            color: #333;
             line-height: 1.2;
         }
     </style>
 </head>
 <body>
+    <div class="no-print">
+        <div style="font-weight:bold; color:#0f172a;">Cetak Struk Logistik</div>
+        <label class="toggle-mode">
+            <input type="checkbox" id="modeCheck" checked onchange="toggleMode(this)">
+            <span>Mode POS-58 (Kompensasi QR 2x)</span>
+        </label>
+        <button class="btn-print" onclick="window.print()">Cetak / Print</button>
+    </div>
+
     <div class="ticket">
         <div class="header">
             <div class="event-title">ALPHA CHASE RUN 2026</div>
-            <div class="doc-title">STRUK PENGAMBILAN LOGISTIK</div>
+            <div class="doc-title">STRUK LOGISTIK</div>
         </div>
         <div class="qr-section">
-            <img id="qrImg" src="${qrSrc}" alt="QR Logistik" />
+            <img id="qrImg" class="qr-pos58" src="${qrSrc}" alt="QR Logistik" />
             <div class="log-code-label">KODE LOGISTIK</div>
             <div class="log-code">${logCode}</div>
         </div>
         <div class="info-section">
-            <div class="info-row"><span class="info-label">NAMA:</span><span class="info-value">${nama}</span></div>
-            <div class="info-row"><span class="info-label">KATEGORI:</span><span class="info-value">${kat}</span></div>
-            <div class="info-row"><span class="info-label">BIB:</span><span class="info-value bib-highlight">${bib}</span></div>
+            <div class="info-item"><span class="info-label">NAMA:</span><span class="info-value">${nama}</span></div>
+            <div class="info-item"><span class="info-label">KAT:</span><span class="info-value">${kat}</span></div>
+            <div class="info-item"><span class="info-label">BIB:</span><span class="info-value bib-val">${bib}</span></div>
         </div>
         <div class="footer">
-            <p>Serahkan struk ini ke bagian pengambilan logistik.</p>
+            <p>Serahkan ke bagian logistik.</p>
         </div>
     </div>
+
+    <script>
+        function toggleMode(el) {
+            var img = document.getElementById('qrImg');
+            if (el.checked) {
+                img.className = 'qr-pos58';
+            } else {
+                img.className = 'qr-normal';
+            }
+        }
+    <\/script>
 </body>
 </html>`);
     printWin.document.close();
@@ -2116,7 +2197,6 @@ window.printLogistik = function() {
         printWin.focus();
         setTimeout(function() {
             printWin.print();
-            printWin.close();
         }, 300);
     };
 
