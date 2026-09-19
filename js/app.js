@@ -1952,193 +1952,181 @@ window.printLogistik = function() {
     const kat = document.getElementById('ciResKat').textContent;
     const bib = document.getElementById('ciResBib').textContent;
     const printWin = window.open('', '_blank', 'width=450,height=650');
-    printWin.document.write(`
-        <!DOCTYPE html>
-        <html><head><meta charset="UTF-8"><title>Struk Logistik - ${logCode}</title><style>
-            @page {
-                size: 58mm 80mm;
-                margin: 0;
+    if (!printWin) {
+        alert('Popup diblokir oleh browser. Harap izinkan popup untuk mencetak struk.');
+        return;
+    }
+
+    printWin.document.open();
+    printWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Struk - ${logCode}</title>
+    <style>
+        @page {
+            size: 58mm auto;
+            margin: 0;
+        }
+        @media print {
+            html, body {
+                width: 48mm !important;
+                margin: 0 auto !important;
+                padding: 1mm 0 !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
-            @media print {
-                html, body {
-                    width: 58mm;
-                    height: 80mm;
-                    max-height: 80mm;
-                    margin: 0;
-                    padding: 0;
-                    background: #fff;
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                }
-                .ticket {
-                    border: 1px dashed #000 !important;
-                }
-            }
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                color: #000;
-                background: #fff;
-                width: 58mm;
-                height: 80mm;
-                max-height: 80mm;
-                margin: 0 auto;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                padding: 1.5mm;
-                -webkit-font-smoothing: antialiased;
-            }
-            .ticket {
-                width: 100%;
-                max-width: 54mm;
-                height: 77mm;
-                max-height: 77mm;
-                border: 1px dashed #333;
-                border-radius: 4px;
-                padding: 1.5mm 2mm 1mm 2mm;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                align-items: center;
-                text-align: center;
-                background: #fff;
-                overflow: hidden;
-            }
-            .header {
-                width: 100%;
-                border-bottom: 1px dashed #666;
-                padding-bottom: 1mm;
-            }
-            .event-title {
-                font-size: 8.5px;
-                font-weight: 800;
-                letter-spacing: 0.3px;
-                text-transform: uppercase;
-                color: #000;
-                line-height: 1.15;
-            }
-            .doc-title {
-                font-size: 7px;
-                font-weight: 600;
-                color: #444;
-                text-transform: uppercase;
-                letter-spacing: 0.4px;
-                margin-top: 1px;
-            }
-            .qr-section {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                margin: 0.5mm 0;
-            }
-            .qr-section img {
-                width: 28mm;
-                height: 28mm;
-                display: block;
-                image-rendering: -webkit-optimize-contrast;
-                image-rendering: crisp-edges;
-            }
-            .log-code-wrap {
-                margin-top: 0.5mm;
-            }
-            .log-code-label {
-                font-size: 6.5px;
-                color: #555;
-                font-weight: 700;
-                letter-spacing: 0.8px;
-                text-transform: uppercase;
-            }
-            .log-code {
-                font-size: 16px;
-                font-weight: 900;
-                letter-spacing: 1.5px;
-                line-height: 1.1;
-                color: #000;
-                font-family: monospace, monospace;
-            }
-            .info-section {
-                width: 100%;
-                border-top: 1px dashed #666;
-                border-bottom: 1px dashed #666;
-                padding: 1mm 0;
-                text-align: left;
-            }
-            .info-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: baseline;
-                margin-bottom: 1px;
-            }
-            .info-row:last-child {
-                margin-bottom: 0;
-            }
-            .info-label {
-                color: #444;
-                font-weight: 600;
-                font-size: 7.5px;
-                width: 15mm;
-                flex-shrink: 0;
-            }
-            .info-value {
-                color: #000;
-                font-weight: 700;
-                font-size: 8px;
-                text-align: right;
-                word-break: break-word;
-                flex: 1;
-            }
-            .info-value.bib-highlight {
-                font-size: 9.5px;
-                font-family: monospace, monospace;
-                letter-spacing: 0.5px;
-            }
-            .footer {
-                width: 100%;
-                padding-top: 0.5mm;
-            }
-            .footer p {
-                font-size: 6.5px;
-                color: #555;
-                line-height: 1.15;
-                text-align: center;
-            }
-        </style></head><body>
-        <div class="ticket">
-            <div class="header">
-                <div class="event-title">ALPHA CHASE RUN 2026</div>
-                <div class="doc-title">STRUK PENGAMBILAN LOGISTIK</div>
-            </div>
-            <div class="qr-section">
-                <img src="${qrSrc}" alt="QR Logistik" />
-                <div class="log-code-wrap">
-                    <div class="log-code-label">KODE LOGISTIK</div>
-                    <div class="log-code">${logCode}</div>
-                </div>
-            </div>
-            <div class="info-section">
-                <div class="info-row"><span class="info-label">NAMA:</span><span class="info-value">${nama}</span></div>
-                <div class="info-row"><span class="info-label">KATEGORI:</span><span class="info-value">${kat}</span></div>
-                <div class="info-row"><span class="info-label">BIB:</span><span class="info-value bib-highlight">${bib}</span></div>
-            </div>
-            <div class="footer">
-                <p>Serahkan struk ini ke bagian pengambilan logistik.</p>
-            </div>
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #000;
+            background: #fff;
+            width: 48mm;
+            margin: 0 auto;
+            padding: 2mm 1mm;
+            -webkit-font-smoothing: antialiased;
+        }
+        .ticket {
+            width: 100%;
+            text-align: center;
+        }
+        .header {
+            border-bottom: 1px dashed #000;
+            padding-bottom: 3px;
+            margin-bottom: 4px;
+        }
+        .event-title {
+            font-size: 9.5px;
+            font-weight: 900;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+        .doc-title {
+            font-size: 7.5px;
+            font-weight: bold;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-top: 1px;
+        }
+        .qr-section {
+            margin: 3px 0;
+            text-align: center;
+        }
+        .qr-section img {
+            width: 30mm;
+            height: 30mm;
+            display: block;
+            margin: 0 auto;
+            image-rendering: pixelated;
+        }
+        .log-code-label {
+            font-size: 7px;
+            font-weight: bold;
+            color: #444;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+        .log-code {
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            line-height: 1.1;
+            font-family: monospace;
+            margin-top: 1px;
+        }
+        .info-section {
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding: 3px 0;
+            margin: 4px 0;
+            text-align: left;
+            font-size: 8px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        .info-label {
+            font-weight: bold;
+            width: 15mm;
+            flex-shrink: 0;
+            color: #333;
+        }
+        .info-value {
+            font-weight: bold;
+            text-align: right;
+            word-break: break-word;
+            flex: 1;
+        }
+        .bib-highlight {
+            font-size: 10.5px;
+            font-family: monospace;
+        }
+        .footer {
+            padding-top: 3px;
+            text-align: center;
+        }
+        .footer p {
+            font-size: 7px;
+            color: #444;
+            line-height: 1.2;
+        }
+    </style>
+</head>
+<body>
+    <div class="ticket">
+        <div class="header">
+            <div class="event-title">ALPHA CHASE RUN 2026</div>
+            <div class="doc-title">STRUK PENGAMBILAN LOGISTIK</div>
         </div>
-        <script>
-            window.onload = function() {
-                setTimeout(function() {
-                    window.print();
-                    window.close();
-                }, 500);
-            };
-        <\\/script>
-        </body></html>`);
+        <div class="qr-section">
+            <img id="qrImg" src="${qrSrc}" alt="QR Logistik" />
+            <div class="log-code-label">KODE LOGISTIK</div>
+            <div class="log-code">${logCode}</div>
+        </div>
+        <div class="info-section">
+            <div class="info-row"><span class="info-label">NAMA:</span><span class="info-value">${nama}</span></div>
+            <div class="info-row"><span class="info-label">KATEGORI:</span><span class="info-value">${kat}</span></div>
+            <div class="info-row"><span class="info-label">BIB:</span><span class="info-value bib-highlight">${bib}</span></div>
+        </div>
+        <div class="footer">
+            <p>Serahkan struk ini ke bagian pengambilan logistik.</p>
+        </div>
+    </div>
+</body>
+</html>`);
     printWin.document.close();
+
+    const doPrint = function() {
+        printWin.focus();
+        setTimeout(function() {
+            printWin.print();
+            printWin.close();
+        }, 300);
+    };
+
+    const img = printWin.document.getElementById('qrImg');
+    if (img && !img.complete) {
+        img.onload = doPrint;
+        img.onerror = doPrint;
+    } else {
+        setTimeout(doPrint, 250);
+    }
 };
 
 window.findPesertaForLogistik = function(inputVal) {
