@@ -1954,15 +1954,16 @@ window.printLogistik = function() {
     const printWin = window.open('', '_blank', 'width=450,height=650');
     printWin.document.write(`
         <!DOCTYPE html>
-        <html><head><meta charset="UTF-8"><title>Struk Logistik B2 - ${logCode}</title><style>
+        <html><head><meta charset="UTF-8"><title>Struk Logistik - ${logCode}</title><style>
             @page {
-                size: 73mm 111mm;
+                size: 58mm 80mm;
                 margin: 0;
             }
             @media print {
                 html, body {
-                    width: 73mm;
-                    height: 111mm;
+                    width: 58mm;
+                    height: 80mm;
+                    max-height: 80mm;
                     margin: 0;
                     padding: 0;
                     background: #fff;
@@ -1970,7 +1971,7 @@ window.printLogistik = function() {
                     print-color-adjust: exact;
                 }
                 .ticket {
-                    border: 1.5px dashed #000 !important;
+                    border: 1px dashed #000 !important;
                 }
             }
             * {
@@ -1982,22 +1983,24 @@ window.printLogistik = function() {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                 color: #000;
                 background: #fff;
-                width: 73mm;
-                height: 111mm;
+                width: 58mm;
+                height: 80mm;
+                max-height: 80mm;
                 margin: 0 auto;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                padding: 2mm;
+                padding: 1.5mm;
                 -webkit-font-smoothing: antialiased;
             }
             .ticket {
-                width: 69mm;
-                height: 107mm;
-                max-height: 107mm;
-                border: 1.5px dashed #333;
-                border-radius: 6px;
-                padding: 3mm 3mm 2.5mm 3mm;
+                width: 100%;
+                max-width: 54mm;
+                height: 77mm;
+                max-height: 77mm;
+                border: 1px dashed #333;
+                border-radius: 4px;
+                padding: 1.5mm 2mm 1mm 2mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
@@ -2009,51 +2012,51 @@ window.printLogistik = function() {
             .header {
                 width: 100%;
                 border-bottom: 1px dashed #666;
-                padding-bottom: 1.5mm;
+                padding-bottom: 1mm;
             }
             .event-title {
-                font-size: 10.5px;
+                font-size: 8.5px;
                 font-weight: 800;
-                letter-spacing: 0.5px;
+                letter-spacing: 0.3px;
                 text-transform: uppercase;
                 color: #000;
-                line-height: 1.2;
+                line-height: 1.15;
             }
             .doc-title {
-                font-size: 8px;
+                font-size: 7px;
                 font-weight: 600;
                 color: #444;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 0.4px;
                 margin-top: 1px;
             }
             .qr-section {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                margin: 1mm 0;
+                margin: 0.5mm 0;
             }
             .qr-section img {
-                width: 36mm;
-                height: 36mm;
+                width: 28mm;
+                height: 28mm;
                 display: block;
                 image-rendering: -webkit-optimize-contrast;
                 image-rendering: crisp-edges;
             }
             .log-code-wrap {
-                margin-top: 1mm;
+                margin-top: 0.5mm;
             }
             .log-code-label {
-                font-size: 7.5px;
+                font-size: 6.5px;
                 color: #555;
                 font-weight: 700;
-                letter-spacing: 1px;
+                letter-spacing: 0.8px;
                 text-transform: uppercase;
             }
             .log-code {
-                font-size: 21px;
+                font-size: 16px;
                 font-weight: 900;
-                letter-spacing: 2px;
+                letter-spacing: 1.5px;
                 line-height: 1.1;
                 color: #000;
                 font-family: monospace, monospace;
@@ -2062,14 +2065,14 @@ window.printLogistik = function() {
                 width: 100%;
                 border-top: 1px dashed #666;
                 border-bottom: 1px dashed #666;
-                padding: 1.5mm 0;
+                padding: 1mm 0;
                 text-align: left;
             }
             .info-row {
                 display: flex;
                 justify-content: space-between;
                 align-items: baseline;
-                margin-bottom: 1.5px;
+                margin-bottom: 1px;
             }
             .info-row:last-child {
                 margin-bottom: 0;
@@ -2077,20 +2080,20 @@ window.printLogistik = function() {
             .info-label {
                 color: #444;
                 font-weight: 600;
-                font-size: 9px;
-                width: 18mm;
+                font-size: 7.5px;
+                width: 15mm;
                 flex-shrink: 0;
             }
             .info-value {
                 color: #000;
                 font-weight: 700;
-                font-size: 9.5px;
+                font-size: 8px;
                 text-align: right;
                 word-break: break-word;
                 flex: 1;
             }
             .info-value.bib-highlight {
-                font-size: 11px;
+                font-size: 9.5px;
                 font-family: monospace, monospace;
                 letter-spacing: 0.5px;
             }
@@ -2099,9 +2102,9 @@ window.printLogistik = function() {
                 padding-top: 0.5mm;
             }
             .footer p {
-                font-size: 7.5px;
+                font-size: 6.5px;
                 color: #555;
-                line-height: 1.2;
+                line-height: 1.15;
                 text-align: center;
             }
         </style></head><body>
