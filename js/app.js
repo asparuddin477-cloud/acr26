@@ -33,7 +33,7 @@ const State = {
             'assets/gallery/gallery_4.png'
         ]),
         bgHero: 'assets/bg_hero.png',
-        bgHeroOpacity: '15',
+        bgHeroOpacity: '35',
         benefits: JSON.stringify([
             'assets/benefits/benefit_1.png',
             'assets/benefits/benefit_2.png',
@@ -110,6 +110,7 @@ window.nav = function(pageId) {
         if(pageId === 'bibcheck') { resetBibSearch(); }
         if(pageId === 'startgate') { initStartGatePage(); }
         if(pageId === 'startlive') { initStartLivePage(); }
+        if(pageId === 'pengaturan') { applySettingsToUI(); } // Pastikan form pengaturan selalu sinkron
     });
 };
 
@@ -517,7 +518,7 @@ function applySettingsToUI() {
     if (uploadedBgHero) { 
         heroOverlay.style.backgroundImage = `url('${uploadedBgHero}')`; 
         heroOverlay.style.display = 'block'; 
-        heroOverlay.style.opacity = (s.bgHeroOpacity || '20') / 100;
+        heroOverlay.style.opacity = (s.bgHeroOpacity || '35') / 100;
     } else { 
         heroOverlay.style.display = 'none'; 
     }
@@ -591,7 +592,7 @@ function applySettingsToUI() {
     if (document.getElementById('setDiskonKuota')) document.getElementById('setDiskonKuota').value = s.diskonKuota || '';
     if (document.getElementById('setDiskonNominal')) document.getElementById('setDiskonNominal').value = s.diskonNominal || '';
     document.getElementById('setMapEmbed').value = s.mapEmbed || '';
-    document.getElementById('setBgOpacity').value = s.bgHeroOpacity || '15';
+    document.getElementById('setBgOpacity').value = s.bgHeroOpacity || '35';
     document.getElementById('setAturan').value = s.aturan || '';
     
     const aturanList = document.getElementById('infoAturanList');
@@ -1950,22 +1951,189 @@ window.printLogistik = function() {
     const nama = document.getElementById('ciResNama').textContent;
     const kat = document.getElementById('ciResKat').textContent;
     const bib = document.getElementById('ciResBib').textContent;
-    const printWin = window.open('', '_blank', 'width=400,height=600');
+    const printWin = window.open('', '_blank', 'width=450,height=650');
     printWin.document.write(`
-        <html><head><title>Print Struk</title><style>
-            body { font-family: monospace; text-align: center; padding: 20px; color: #000; }
-            .ticket { border: 2px dashed #000; padding: 20px; display: inline-block; max-width: 300px; width: 100%; margin: 0 auto; }
-            img { width: 150px; height: 150px; margin-bottom: 10px; }
-            h2 { margin: 0; font-size: 20px; text-transform: uppercase;}
-            h1 { margin: 5px 0; font-size: 32px; letter-spacing: 2px; }
-            p { margin: 5px 0; font-size: 14px; text-align: left; }
-            hr { border-top: 1px dashed #000; margin: 15px 0; }
+        <!DOCTYPE html>
+        <html><head><meta charset="UTF-8"><title>Struk Logistik B2 - ${logCode}</title><style>
+            @page {
+                size: 73mm 111mm;
+                margin: 0;
+            }
+            @media print {
+                html, body {
+                    width: 73mm;
+                    height: 111mm;
+                    margin: 0;
+                    padding: 0;
+                    background: #fff;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+                .ticket {
+                    border: 1.5px dashed #000 !important;
+                }
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                color: #000;
+                background: #fff;
+                width: 73mm;
+                height: 111mm;
+                margin: 0 auto;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 2mm;
+                -webkit-font-smoothing: antialiased;
+            }
+            .ticket {
+                width: 69mm;
+                height: 107mm;
+                max-height: 107mm;
+                border: 1.5px dashed #333;
+                border-radius: 6px;
+                padding: 3mm 3mm 2.5mm 3mm;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                align-items: center;
+                text-align: center;
+                background: #fff;
+                overflow: hidden;
+            }
+            .header {
+                width: 100%;
+                border-bottom: 1px dashed #666;
+                padding-bottom: 1.5mm;
+            }
+            .event-title {
+                font-size: 10.5px;
+                font-weight: 800;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                color: #000;
+                line-height: 1.2;
+            }
+            .doc-title {
+                font-size: 8px;
+                font-weight: 600;
+                color: #444;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-top: 1px;
+            }
+            .qr-section {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin: 1mm 0;
+            }
+            .qr-section img {
+                width: 36mm;
+                height: 36mm;
+                display: block;
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+            }
+            .log-code-wrap {
+                margin-top: 1mm;
+            }
+            .log-code-label {
+                font-size: 7.5px;
+                color: #555;
+                font-weight: 700;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+            }
+            .log-code {
+                font-size: 21px;
+                font-weight: 900;
+                letter-spacing: 2px;
+                line-height: 1.1;
+                color: #000;
+                font-family: monospace, monospace;
+            }
+            .info-section {
+                width: 100%;
+                border-top: 1px dashed #666;
+                border-bottom: 1px dashed #666;
+                padding: 1.5mm 0;
+                text-align: left;
+            }
+            .info-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                margin-bottom: 1.5px;
+            }
+            .info-row:last-child {
+                margin-bottom: 0;
+            }
+            .info-label {
+                color: #444;
+                font-weight: 600;
+                font-size: 9px;
+                width: 18mm;
+                flex-shrink: 0;
+            }
+            .info-value {
+                color: #000;
+                font-weight: 700;
+                font-size: 9.5px;
+                text-align: right;
+                word-break: break-word;
+                flex: 1;
+            }
+            .info-value.bib-highlight {
+                font-size: 11px;
+                font-family: monospace, monospace;
+                letter-spacing: 0.5px;
+            }
+            .footer {
+                width: 100%;
+                padding-top: 0.5mm;
+            }
+            .footer p {
+                font-size: 7.5px;
+                color: #555;
+                line-height: 1.2;
+                text-align: center;
+            }
         </style></head><body>
         <div class="ticket">
-            <h2>KODE LOGISTIK</h2><img src="${qrSrc}" /><h1>${logCode}</h1><hr/>
-            <p><strong>NAMA:</strong> ${nama}</p><p><strong>KATEGORI:</strong> ${kat}</p><p><strong>BIB:</strong> ${bib}</p><hr/>
-            <p style="text-align:center; font-size:10px;">Serahkan struk ini ke bagian pengambilan logistik.</p>
-        </div><script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); }<\/script>
+            <div class="header">
+                <div class="event-title">ALPHA CHASE RUN 2026</div>
+                <div class="doc-title">STRUK PENGAMBILAN LOGISTIK</div>
+            </div>
+            <div class="qr-section">
+                <img src="${qrSrc}" alt="QR Logistik" />
+                <div class="log-code-wrap">
+                    <div class="log-code-label">KODE LOGISTIK</div>
+                    <div class="log-code">${logCode}</div>
+                </div>
+            </div>
+            <div class="info-section">
+                <div class="info-row"><span class="info-label">NAMA:</span><span class="info-value">${nama}</span></div>
+                <div class="info-row"><span class="info-label">KATEGORI:</span><span class="info-value">${kat}</span></div>
+                <div class="info-row"><span class="info-label">BIB:</span><span class="info-value bib-highlight">${bib}</span></div>
+            </div>
+            <div class="footer">
+                <p>Serahkan struk ini ke bagian pengambilan logistik.</p>
+            </div>
+        </div>
+        <script>
+            window.onload = function() {
+                setTimeout(function() {
+                    window.print();
+                    window.close();
+                }, 500);
+            };
+        <\\/script>
         </body></html>`);
     printWin.document.close();
 };
