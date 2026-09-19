@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Alpha Chase Run (ACR 2026) - Application Logic
  * Terintegrasi dengan Firebase Cloud Firestore untuk Sinkronisasi Real-Time
  */
@@ -356,7 +356,7 @@ window.customAlert = function(message, type = 'info', title = null) {
             titleEl.textContent = title || "Informasi";
         }
 
-        actionsDiv.innerHTML = `<button id="customModalOkBtn" class="flex-1 px-5 py-3 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold rounded-xl transition text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer"><span>Tutup & Keluar</span> ✕</button>`;
+        actionsDiv.innerHTML = `<button id="customModalOkBtn" class="flex-1 px-5 py-3 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold rounded-xl transition text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer"><span>Tutup & Keluar</span> âœ•</button>`;
         modal.classList.remove('hidden');
 
         document.getElementById('customModalOkBtn').onclick = () => window.closeCustomModal(true);
@@ -1405,7 +1405,7 @@ window.renderMasterTable = function() {
         btnHTML += `<button onclick="deletePeserta('${p.kode}')" class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm hover:bg-red-600 active:scale-95">Hapus</button></div>`;
         
         let isCheckedIn = window.isPesertaCheckedIn(p);
-        let checkInIndicator = isCheckedIn ? '<br><span class="text-[9px] text-emerald-600">✅ Hadir</span>' : '';
+        let checkInIndicator = isCheckedIn ? '<br><span class="text-[9px] text-emerald-600">âœ… Hadir</span>' : '';
         
         let idHTML = p.bibNumber 
             ? `<span class="font-bold text-blue-600 text-sm">${p.bibNumber}</span>${checkInIndicator}` 
@@ -1419,7 +1419,7 @@ window.renderMasterTable = function() {
                 <td class="py-3 px-3 align-top"><span class="font-bold text-slate-700 text-xs uppercase">${p.bibName || '-'}</span></td>
                 <td class="py-3 px-3 align-top">
                     <div class="font-bold text-slate-800 text-sm truncate max-w-[120px] sm:max-w-[200px]">${p.nama}</div>
-                    <div class="text-[10px] text-slate-500">${p.kategori} <span class="text-indigo-600 font-bold ml-1">• ${p.jersey || '-'}</span></div>
+                    <div class="text-[10px] text-slate-500">${p.kategori} <span class="text-indigo-600 font-bold ml-1">â€¢ ${p.jersey || '-'}</span></div>
                 </td>
                 <td class="py-3 px-3 align-top">
                     <span class="text-[10px] border px-2 py-1 rounded inline-block ${statusClass} leading-none text-center">${p.status}</span>
@@ -1514,7 +1514,7 @@ window.openEditPesertaModal = function(kode) {
     if (!p) return;
 
     document.getElementById('editKode').value = p.kode;
-    document.getElementById('editModalSubtitle').textContent = `Kode: ${p.kode} • BIB: ${p.bibNumber || '-'}`;
+    document.getElementById('editModalSubtitle').textContent = `Kode: ${p.kode} â€¢ BIB: ${p.bibNumber || '-'}`;
     document.getElementById('editNama').value = p.nama || '';
     
     // Set Ukuran Jersey
@@ -1947,247 +1947,143 @@ window.renderCheckinHistory = function() {
 
 window.printLogistik = function() {
     const logCode = document.getElementById('logistikCodeDisplay').textContent;
-    const nama = document.getElementById('ciResNama').textContent;
-    const kat = document.getElementById('ciResKat').textContent;
-    const bib = document.getElementById('ciResBib').textContent;
+    const nama    = document.getElementById('ciResNama').textContent;
+    const kat     = document.getElementById('ciResKat').textContent;
+    const bib     = document.getElementById('ciResBib').textContent;
 
-    // Generate QR code sebagai canvas data URL dari library lokal (tidak pakai URL eksternal)
-    // Ini menghindari masalah gambar yang diregangkan oleh driver POS-58
-    let qrDataUrl = '';
+    // Generate QR sebagai canvas murni 300x300 px dari library lokal
+    let rawQrCanvas = null;
     try {
         const tempDiv = document.createElement('div');
-        tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:200px;height:200px;';
+        tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
         document.body.appendChild(tempDiv);
-        const qrObj = new QRCode(tempDiv, {
-            text: logCode,
-            width: 200,
-            height: 200,
-            colorDark: '#000000',
-            colorLight: '#ffffff',
+        new QRCode(tempDiv, {
+            text: logCode, width: 300, height: 300,
+            colorDark: '#000000', colorLight: '#ffffff',
             correctLevel: QRCode.CorrectLevel.M
         });
-        // Coba ambil dari canvas dulu
-        const canvas = tempDiv.querySelector('canvas');
-        if (canvas) {
-            qrDataUrl = canvas.toDataURL('image/png');
-        } else {
-            // Fallback: coba dari img tag (SVG renderer)
+        rawQrCanvas = tempDiv.querySelector('canvas');
+        if (!rawQrCanvas) {
             const imgEl = tempDiv.querySelector('img');
-            if (imgEl) qrDataUrl = imgEl.src;
+            if (imgEl && imgEl.src) {
+                const img2 = new Image();
+                img2.src = imgEl.src;
+                rawQrCanvas = document.createElement('canvas');
+                rawQrCanvas.width = 300; rawQrCanvas.height = 300;
+                rawQrCanvas.getContext('2d').drawImage(img2, 0, 0, 300, 300);
+            }
         }
+        if (rawQrCanvas) document.body.appendChild(rawQrCanvas);
         document.body.removeChild(tempDiv);
-    } catch(e) {
-        // Fallback ke URL eksternal jika library gagal
-        qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(logCode)}`;
+    } catch(e) { rawQrCanvas = null; }
+
+    // Buat data URL QR dengan kompresi vertikal sesuai faktor regangan printer
+    function makeCompressedQrUrl(factor) {
+        var W = 300;
+        var H = Math.max(1, Math.round(W / factor));
+        var out = document.createElement('canvas');
+        out.width = W; out.height = H;
+        var ctx = out.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        if (rawQrCanvas) {
+            ctx.drawImage(rawQrCanvas, 0, 0, W, H);
+        } else {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+        }
+        return out.toDataURL('image/png');
     }
 
-    const printWin = window.open('', '_blank', 'width=480,height=700');
-    if (!printWin) {
-        alert('Popup diblokir oleh browser. Harap izinkan popup untuk mencetak struk.');
-        return;
-    }
+    var printWin = window.open('', '_blank', 'width=520,height=780');
+    if (!printWin) { alert('Popup diblokir. Izinkan popup untuk mencetak.'); return; }
+
+    var initialFactor = 3.0;
+    var initialQrUrl  = makeCompressedQrUrl(initialFactor);
 
     printWin.document.open();
-    printWin.document.write(`<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Struk - ${logCode}</title>
-    <style>
-        @page {
-            size: 58mm auto;
-            margin: 2mm 0 0 0;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        @media print {
-            .no-print { display: none !important; }
-            html, body {
-                width: 54mm !important;
-                margin: 0 auto !important;
-                padding: 0 !important;
-                background: #fff !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            .ticket {
-                width: 54mm !important;
-                padding: 2mm 1mm !important;
-            }
-            .qr-img {
-                width: 40mm !important;
-                height: 40mm !important;
-                display: block !important;
-                margin: 0 auto !important;
-                image-rendering: pixelated !important;
-            }
-        }
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            color: #000;
-            background: #e2e8f0;
-            padding: 12px;
-        }
-        .no-print {
-            max-width: 340px;
-            margin: 0 auto 12px auto;
-            background: #fff;
-            padding: 12px 16px;
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            text-align: center;
-            font-size: 12px;
-        }
-        .no-print h3 { font-size: 14px; margin-bottom: 6px; color: #1e293b; }
-        .no-print p { color: #64748b; font-size: 11px; margin-bottom: 8px; }
-        .btn-print {
-            background: #2563eb;
-            color: #fff;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 13px;
-        }
-        .ticket {
-            width: 54mm;
-            margin: 0 auto;
-            text-align: center;
-            background: #fff;
-            padding: 3mm 2mm;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-        }
-        .header {
-            border-bottom: 1px dashed #000;
-            padding-bottom: 3px;
-            margin-bottom: 5px;
-        }
-        .event-title {
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .doc-title {
-            font-size: 7.5px;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: #333;
-            margin-top: 1px;
-        }
-        .qr-section {
-            margin: 4px 0 3px;
-            text-align: center;
-        }
-        .qr-img {
-            width: 40mm;
-            height: 40mm;
-            display: block;
-            margin: 0 auto;
-            image-rendering: pixelated;
-            image-rendering: -webkit-optimize-contrast;
-        }
-        .log-code-label {
-            font-size: 7px;
-            font-weight: bold;
-            color: #444;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 3px;
-        }
-        .log-code {
-            font-size: 16px;
-            font-weight: 900;
-            letter-spacing: 2px;
-            font-family: monospace;
-            margin-top: 1px;
-        }
-        .info-section {
-            border-top: 1px dashed #000;
-            border-bottom: 1px dashed #000;
-            padding: 4px 0;
-            margin: 5px 0;
-            text-align: left;
-            font-size: 8px;
-        }
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 3px;
-            line-height: 1.3;
-        }
-        .info-item:last-child { margin-bottom: 0; }
-        .info-label {
-            font-weight: bold;
-            min-width: 14mm;
-            flex-shrink: 0;
-            color: #333;
-        }
-        .info-value {
-            font-weight: bold;
-            text-align: right;
-            flex: 1;
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
-        .bib-val {
-            font-size: 10px;
-            font-family: monospace;
-            font-weight: 900;
-        }
-        .footer {
-            padding-top: 3px;
-            text-align: center;
-        }
-        .footer p {
-            font-size: 7px;
-            color: #444;
-        }
-    </style>
-</head>
-<body>
-    <div class="no-print">
-        <h3>Struk Logistik - ${logCode}</h3>
-        <p>Pastikan printer POS-58 terpilih dan Paper Size diset ke <b>58mm</b>.</p>
-        <button class="btn-print" onclick="window.print()">🖨️ Cetak Struk</button>
-    </div>
-    <div class="ticket">
-        <div class="header">
-            <div class="event-title">ALPHA CHASE RUN 2026</div>
-            <div class="doc-title">STRUK PENGAMBILAN LOGISTIK</div>
-        </div>
-        <div class="qr-section">
-            <img class="qr-img" src="${qrDataUrl}" alt="QR ${logCode}" />
-            <div class="log-code-label">KODE LOGISTIK</div>
-            <div class="log-code">${logCode}</div>
-        </div>
-        <div class="info-section">
-            <div class="info-item">
-                <span class="info-label">NAMA:</span>
-                <span class="info-value">${nama}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">KATEGORI:</span>
-                <span class="info-value">${kat}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">BIB:</span>
-                <span class="info-value bib-val">${bib}</span>
-            </div>
-        </div>
-        <div class="footer">
-            <p>Serahkan struk ini ke bagian pengambilan logistik.</p>
-        </div>
-    </div>
-    <script>
-        window.onload = function() {
-            setTimeout(function() { window.print(); }, 400);
-        };
-    <\/script>
-</body>
-</html>`);
+    printWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Struk - ' + logCode + '</title><style>'
++ '@page{size:58mm auto;margin:1mm 0 0 0;}'
++ '*{box-sizing:border-box;margin:0;padding:0;}'
++ '@media print{'
++ '.no-print{display:none!important;}'
++ 'html,body{width:54mm!important;margin:0 auto!important;padding:0!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++ '.ticket{width:54mm!important;padding:2mm 1mm!important;box-shadow:none!important;}'
++ '#qrImg{display:block!important;margin:0 auto!important;image-rendering:pixelated!important;object-fit:fill!important;}'
++ '}'
++ 'body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#dde3ec;padding:10px;}'
++ '.panel{max-width:360px;margin:0 auto 12px;background:#fff;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.18);padding:14px 18px;font-size:12px;color:#1e293b;}'
++ '.panel h3{font-size:15px;margin-bottom:4px;}'
++ '.sub{color:#64748b;font-size:11px;margin-bottom:12px;}'
++ '.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}'
++ '.slider-row label{font-weight:bold;white-space:nowrap;font-size:11px;}'
++ '.slider-row input[type=range]{flex:1;accent-color:#2563eb;}'
++ '.factor-badge{background:#2563eb;color:#fff;border-radius:6px;padding:2px 8px;font-weight:bold;font-size:13px;min-width:48px;text-align:center;}'
++ '.hint{background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:8px 10px;font-size:10.5px;color:#92400e;margin-bottom:12px;line-height:1.5;}'
++ '.btn-print{display:block;width:100%;background:#16a34a;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;}'
++ '.ticket{width:54mm;margin:0 auto;background:#fff;padding:3mm 2mm;box-shadow:0 2px 8px rgba(0,0,0,.15);text-align:center;}'
++ '.header{border-bottom:1px dashed #000;padding-bottom:3px;margin-bottom:5px;}'
++ '.event-title{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;}'
++ '.doc-title{font-size:7px;font-weight:bold;text-transform:uppercase;color:#333;margin-top:1px;}'
++ '.qr-section{margin:4px 0 3px;text-align:center;}'
++ '#qrImg{display:block;margin:0 auto;image-rendering:pixelated;object-fit:fill;}'
++ '.log-code-label{font-size:7px;font-weight:bold;color:#444;text-transform:uppercase;letter-spacing:1px;margin-top:3px;}'
++ '.log-code{font-size:15px;font-weight:900;letter-spacing:2px;font-family:monospace;margin-top:1px;}'
++ '.info-section{border-top:1px dashed #000;border-bottom:1px dashed #000;padding:4px 0;margin:5px 0;text-align:left;font-size:8px;}'
++ '.info-item{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px;line-height:1.3;}'
++ '.info-item:last-child{margin-bottom:0;}'
++ '.info-label{font-weight:bold;min-width:15mm;flex-shrink:0;color:#333;}'
++ '.info-value{font-weight:bold;text-align:right;flex:1;word-break:break-word;overflow-wrap:break-word;}'
++ '.bib-val{font-size:10px;font-family:monospace;font-weight:900;}'
++ '.footer{padding-top:3px;text-align:center;}'
++ '.footer p{font-size:6.5px;color:#444;}'
++ '</style></head><body>'
++ '<div class="no-print panel">'
++ '<h3>Struk Logistik &mdash; ' + logCode + '</h3>'
++ '<div class="sub">Geser slider jika QR masih <b>melar ke bawah</b> atau <b>gepeng</b> saat dicetak</div>'
++ '<div class="hint">&#9881;&#65039; Cara pakai: geser ke <b>kanan</b> jika QR terlalu panjang, ke <b>kiri</b> jika terlalu gepeng. Targetkan agar QR kotak sempurna saat dicetak, lalu simpan nilainya.</div>'
++ '<div class="slider-row">'
++ '<label>Kompresi QR:</label>'
++ '<input type="range" id="sliderFactor" min="1" max="6" step="0.1" value="' + initialFactor + '" oninput="onFactorChange(this.value)">'
++ '<span class="factor-badge" id="factorLabel">' + initialFactor.toFixed(1) + 'x</span>'
++ '</div>'
++ '<button class="btn-print" onclick="window.print()">&#128424;&#65039; Cetak Sekarang</button>'
++ '</div>'
++ '<div class="ticket">'
++ '<div class="header"><div class="event-title">ALPHA CHASE RUN 2026</div><div class="doc-title">STRUK PENGAMBILAN LOGISTIK</div></div>'
++ '<div class="qr-section"><img id="qrImg" src="' + initialQrUrl + '" width="150" height="50" alt="QR ' + logCode + '"></div>'
++ '<div class="log-code-label">KODE LOGISTIK</div>'
++ '<div class="log-code">' + logCode + '</div>'
++ '<div class="info-section">'
++ '<div class="info-item"><span class="info-label">NAMA:</span><span class="info-value">' + nama + '</span></div>'
++ '<div class="info-item"><span class="info-label">KATEGORI:</span><span class="info-value">' + kat + '</span></div>'
++ '<div class="info-item"><span class="info-label">BIB:</span><span class="info-value bib-val">' + bib + '</span></div>'
++ '</div>'
++ '<div class="footer"><p>Serahkan struk ini ke bagian pengambilan logistik.</p></div>'
++ '</div>'
++ '<script>'
++ 'var _qrCache={};'
++ 'window.__setQrCache=function(c){_qrCache=c;};'
++ 'function onFactorChange(v){'
++ 'v=parseFloat(v);document.getElementById("factorLabel").textContent=v.toFixed(1)+"x";'
++ 'var k=v.toFixed(1);if(_qrCache[k]){document.getElementById("qrImg").src=_qrCache[k];}'
++ '}'
++ '<\/script>'
++ '</body></html>');
     printWin.document.close();
+
+    // Pre-generate semua nilai slider (1.0 - 6.0)
+    setTimeout(function() {
+        try {
+            var factorMap = {};
+            for (var f = 10; f <= 60; f++) {
+                var factor = f / 10;
+                factorMap[factor.toFixed(1)] = makeCompressedQrUrl(factor);
+            }
+            if (printWin && !printWin.closed && printWin.__setQrCache) {
+                printWin.__setQrCache(factorMap);
+            }
+        } catch(e2) { /* ignore */ }
+        if (rawQrCanvas && rawQrCanvas.parentNode) rawQrCanvas.parentNode.removeChild(rawQrCanvas);
+    }, 800);
 };
 
 window.findPesertaForLogistik = function(inputVal) {
@@ -2261,13 +2157,13 @@ window.formatCameraErrorMessage = function(err) {
         return {
             title: "Kamera Sedang Digunakan Tab / Aplikasi Lain",
             message: `Kamera tidak dapat diakses karena <strong>sedang digunakan atau terkunci oleh tab / aplikasi lain</strong> di laptop ini.<br><br>
-            <strong>💡 Cara Mengatasi:</strong><br>
+            <strong>ðŸ’¡ Cara Mengatasi:</strong><br>
             <ol class="list-decimal list-inside space-y-1.5 text-left my-2 text-xs text-slate-700 bg-amber-50 p-3 rounded-xl border border-amber-200">
                 <li>Periksa tab browser lain di laptop Anda (misalnya tab <strong>localhost:8000</strong>, WhatsApp Web, Google Meet, Zoom) yang sedang membuka kamera, lalu <strong>tutup tab tersebut</strong>.</li>
                 <li>Setelah tab lain ditutup, klik tombol <strong>Buka Kamera Scanner</strong> kembali.</li>
             </ol>
             <div class="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs text-left leading-relaxed">
-                <strong>🔫 Alternatif Tanpa Kamera:</strong> Anda tidak wajib menggunakan kamera! Anda bisa langsung menembakkan <strong>Scanner Tembak EPPOS</strong> (USB/Wireless) atau <strong>mengetik nomor BIB / kode</strong> pada kotak input pencarian.
+                <strong>ðŸ”« Alternatif Tanpa Kamera:</strong> Anda tidak wajib menggunakan kamera! Anda bisa langsung menembakkan <strong>Scanner Tembak EPPOS</strong> (USB/Wireless) atau <strong>mengetik nomor BIB / kode</strong> pada kotak input pencarian.
             </div>`
         };
     }
@@ -2276,7 +2172,7 @@ window.formatCameraErrorMessage = function(err) {
         return {
             title: "Izin Akses Kamera Ditolak",
             message: `Browser memblokir izin akses ke kamera pada situs ini.<br><br>
-            <strong>💡 Cara Mengaktifkan Izin:</strong><br>
+            <strong>ðŸ’¡ Cara Mengaktifkan Izin:</strong><br>
             <ol class="list-decimal list-inside space-y-1.5 text-left my-2 text-xs text-slate-700 bg-blue-50 p-3 rounded-xl border border-blue-200">
                 <li>Klik ikon <strong>gembok / pengaturan situs</strong> di sebelah kiri bilah alamat URL browser (di samping nama domain).</li>
                 <li>Ubah perizinan <strong>Kamera (Camera)</strong> menjadi <strong>Izinkan (Allow)</strong>.</li>
@@ -2318,7 +2214,7 @@ window.toggleLogistikScanner = async function() {
         isLogistikScannerActive = false;
         if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
         wrapper.classList.add('hidden');
-        if (txtBtn) txtBtn.textContent = '📷 Buka Kamera Scanner';
+        if (txtBtn) txtBtn.textContent = 'ðŸ“· Buka Kamera Scanner';
         return;
     }
 
@@ -2329,7 +2225,7 @@ window.toggleLogistikScanner = async function() {
     if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
 
     wrapper.classList.remove('hidden');
-    if (txtBtn) txtBtn.textContent = '⏹️ Hentikan Kamera';
+    if (txtBtn) txtBtn.textContent = 'â¹ï¸ Hentikan Kamera';
     isLogistikScannerActive = true;
 
     try {
@@ -2411,7 +2307,7 @@ window.toggleLogistikScanner = async function() {
         }
         if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
         wrapper.classList.add('hidden');
-        if (txtBtn) txtBtn.textContent = '📷 Buka Kamera Scanner';
+        if (txtBtn) txtBtn.textContent = 'ðŸ“· Buka Kamera Scanner';
 
         const info = window.formatCameraErrorMessage(err);
         await window.customAlert(info.message, "warning", info.title);
@@ -2519,7 +2415,7 @@ window.renderLogistikData = function() {
                         <span class="bg-blue-100 group-hover:bg-blue-600 group-hover:text-white text-blue-800 py-1 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition shadow-sm">${jerseyCount[size]}</span>
                         <span class="text-xs text-blue-600 font-semibold group-hover:underline flex items-center gap-1">
                             <span class="hidden sm:inline">Lihat Peserta</span>
-                            <span>➔</span>
+                            <span>âž”</span>
                         </span>
                     </div>
                 </div>`;
@@ -2540,7 +2436,7 @@ window.renderLogistikData = function() {
                     <span class="bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 py-1 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition shadow-sm">${katCount[kat]}</span>
                     <span class="text-xs text-emerald-600 font-semibold group-hover:underline flex items-center gap-1">
                         <span class="hidden sm:inline">Lihat Peserta</span>
-                        <span>➔</span>
+                        <span>âž”</span>
                     </span>
                 </div>
             </div>`;
@@ -2712,7 +2608,7 @@ function renderCatModalRows(list) {
         const nama = String(p.nama || '-');
         const bibNumber = String(p.bibNumber || '-');
         const kode = String(p.kode || '');
-        const bibName = p.bibName ? `• ${p.bibName}` : '';
+        const bibName = p.bibName ? `â€¢ ${p.bibName}` : '';
         const kategori = String(p.kategori || '-');
         const jersey = String(p.jersey || '-');
 
@@ -3030,16 +2926,16 @@ window.handleBibSearchInput = function(query) {
                     <div>
                         <div class="flex items-center gap-2">
                             <span class="font-bold text-slate-700 text-sm uppercase">${escapeHtml(p.nama)}</span>
-                            <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold border border-red-200">❌ Belum Lunas / Verified</span>
+                            <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold border border-red-200">âŒ Belum Lunas / Verified</span>
                         </div>
                         <div class="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
                             <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
-                            <span class="text-slate-300">•</span>
+                            <span class="text-slate-300">â€¢</span>
                             <span class="font-mono text-slate-400">Status: ${escapeHtml(p.status || '-')}</span>
                         </div>
                     </div>
                     <span class="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold flex items-center gap-1">
-                        <span>🔒 Terkunci</span>
+                        <span>ðŸ”’ Terkunci</span>
                     </span>
                 </div>
             `;
@@ -3052,19 +2948,19 @@ window.handleBibSearchInput = function(query) {
                         <div class="flex items-center gap-2">
                             <span class="font-bold text-slate-800 text-sm group-hover:text-amber-700 uppercase">${escapeHtml(p.nama)}</span>
                             <span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold border border-amber-200 flex items-center gap-1">
-                                <span>🔒 Belum Check-In</span>
+                                <span>ðŸ”’ Belum Check-In</span>
                             </span>
                         </div>
                         <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
                             <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
-                            <span class="text-slate-300">•</span>
+                            <span class="text-slate-300">â€¢</span>
                             <span class="font-mono text-amber-700 font-bold">BIB: Terkunci (Ambil di Meja Check-In)</span>
-                            <span class="text-slate-300">•</span>
+                            <span class="text-slate-300">â€¢</span>
                             <span class="font-mono text-slate-400">${escapeHtml(p.kode)}</span>
                         </div>
                     </div>
                     <button type="button" class="px-3 py-1.5 bg-amber-500 group-hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1">
-                        <span>🔒 Terkunci</span>
+                        <span>ðŸ”’ Terkunci</span>
                     </button>
                 </div>
             `;
@@ -3076,19 +2972,19 @@ window.handleBibSearchInput = function(query) {
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-slate-800 text-sm group-hover:text-indigo-600 uppercase">${escapeHtml(p.nama)}</span>
                         <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
-                            <span>✅ Sudah Check-In</span>
+                            <span>âœ… Sudah Check-In</span>
                         </span>
                     </div>
                     <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
                         <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
-                        <span class="text-slate-300">•</span>
+                        <span class="text-slate-300">â€¢</span>
                         <span class="font-mono text-blue-600 font-bold">BIB: ${escapeHtml(p.bibNumber || 'Sudah Ada')}</span>
-                        <span class="text-slate-300">•</span>
+                        <span class="text-slate-300">â€¢</span>
                         <span class="font-mono text-slate-400">${escapeHtml(p.kode)}</span>
                     </div>
                 </div>
                 <button type="button" class="px-3 py-1.5 bg-indigo-600 group-hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1">
-                    <span>Pilih</span> 📸
+                    <span>Pilih</span> ðŸ“¸
                 </button>
             </div>
         `;
@@ -3163,13 +3059,13 @@ window.showBibScreen = async function(kode) {
             `<div class="space-y-3 py-1">
                 <div class="font-black text-slate-900 uppercase text-base sm:text-lg tracking-tight">${escapeHtml(p.nama)}</div>
                 <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold border border-amber-200">
-                    <span>🔒 BIB BELUM DI-CHECK IN</span>
+                    <span>ðŸ”’ BIB BELUM DI-CHECK IN</span>
                 </div>
                 <p class="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
                     Layar BIB resmi & Photo Booth <strong>hanya dapat dibuka</strong> untuk peserta yang sudah melakukan <strong>Check-In / Pengambilan Race Pack</strong> di lokasi lomba.
                 </p>
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 text-left">
-                    <p class="font-bold text-slate-800 mb-1 flex items-center gap-1"><span>📍</span> Petunjuk untuk Pelari:</p>
+                    <p class="font-bold text-slate-800 mb-1 flex items-center gap-1"><span>ðŸ“</span> Petunjuk untuk Pelari:</p>
                     <ol class="list-decimal pl-4 space-y-1 text-slate-500">
                         <li>Kunjungi loket Race Pack Collection panitia di venue.</li>
                         <li>Tunjukkan Kode Pendaftaran: <strong class="font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">${escapeHtml(p.kode)}</strong>.</li>
@@ -3212,7 +3108,7 @@ window.showBibScreen = async function(kode) {
     const statusBadge = document.getElementById('dispBibStatusBadge');
     if (statusBadge) {
         statusBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 flex items-center gap-1";
-        statusBadge.innerHTML = "<span>✅ Verified & Checked-In</span>";
+        statusBadge.innerHTML = "<span>âœ… Verified & Checked-In</span>";
     }
 
     const qrEl = document.getElementById('dispBibQrCode');
@@ -3997,7 +3893,7 @@ window.testBeepSound = function() {
         const toast = document.createElement('div');
         toast.id = 'audioBeepToast';
         toast.className = 'fixed bottom-5 right-5 z-[9999] bg-slate-900 text-emerald-400 px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/40 text-xs font-bold flex items-center gap-2 transition-opacity duration-300';
-        toast.innerHTML = '<span class="text-base">🔊</span><span>Audio Beep Berfungsi Normal! (Volume OK)</span>';
+        toast.innerHTML = '<span class="text-base">ðŸ”Š</span><span>Audio Beep Berfungsi Normal! (Volume OK)</span>';
         document.body.appendChild(toast);
         setTimeout(() => {
             toast.style.opacity = '0';
@@ -4283,11 +4179,11 @@ window.startStartGateScanner = async function() {
             const info = window.formatCameraErrorMessage ? window.formatCameraErrorMessage(err) : { title: "Kamera Tidak Tersedia", message: err.message || err };
             box.className = "p-6 rounded-2xl border-2 border-amber-300 bg-amber-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
             box.innerHTML = `
-                <span class="text-4xl mb-2">📷</span>
+                <span class="text-4xl mb-2">ðŸ“·</span>
                 <h3 class="font-bold text-amber-900 text-base">${escapeHtml(info.title)}</h3>
                 <div class="text-xs text-amber-800 mt-2 max-w-sm text-left leading-relaxed">${info.message}</div>
                 <button type="button" onclick="window.startStartGateScanner()" class="mt-4 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition cursor-pointer">
-                    🔄 Coba Buka Kamera Lagi
+                    ðŸ”„ Coba Buka Kamera Lagi
                 </button>
             `;
         }
@@ -4387,7 +4283,7 @@ window.processStartScan = async function(inputVal) {
         if (box) {
             box.className = "p-6 rounded-2xl border-2 border-red-400 bg-red-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
             box.innerHTML = `
-                <span class="text-4xl mb-2">❌</span>
+                <span class="text-4xl mb-2">âŒ</span>
                 <h3 class="font-black text-red-700 text-lg">PESERTA TIDAK DITEMUKAN!</h3>
                 <p class="text-xs text-red-600 mt-1">Kode / BIB "<strong>${escapeHtml(inputVal)}</strong>" tidak ada di sistem.</p>
             `;
@@ -4401,7 +4297,7 @@ window.processStartScan = async function(inputVal) {
         if (box) {
             box.className = "p-6 rounded-2xl border-2 border-yellow-400 bg-yellow-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
             box.innerHTML = `
-                <span class="text-4xl mb-2">⚠️</span>
+                <span class="text-4xl mb-2">âš ï¸</span>
                 <h3 class="font-black text-yellow-800 text-lg">BELUM DIVERIFIKASI!</h3>
                 <p class="text-xs text-yellow-700 mt-1">Peserta <strong>${escapeHtml(p.nama)}</strong> (${escapeHtml(p.bibNumber || p.kode)}) berstatus <em>${escapeHtml(p.status)}</em>.</p>
             `;
@@ -4416,7 +4312,7 @@ window.processStartScan = async function(inputVal) {
         if (box) {
             box.className = "p-6 rounded-2xl border-2 border-amber-400 bg-amber-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
             box.innerHTML = `
-                <span class="text-4xl mb-2">⛔</span>
+                <span class="text-4xl mb-2">â›”</span>
                 <h3 class="font-black text-amber-900 text-lg">SUDAH MELAKUKAN START!</h3>
                 <p class="text-xs sm:text-sm text-amber-800 mt-1">
                     <strong>${escapeHtml(p.nama)}</strong> (${escapeHtml(p.bibNumber || p.kode)})<br>
@@ -4445,7 +4341,7 @@ window.processStartScan = async function(inputVal) {
         box.className = "p-6 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300 shadow-md";
         box.innerHTML = `
             <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 text-white rounded-full text-xs font-black mb-2 shadow">
-                <span>✓ BERHASIL START</span> • <span>${escapeHtml(gateUsed)}</span>
+                <span>âœ“ BERHASIL START</span> â€¢ <span>${escapeHtml(gateUsed)}</span>
             </div>
             <div class="font-mono text-3xl sm:text-4xl font-black text-emerald-800 tracking-tight my-1">
                 ${escapeHtml(p.bibNumber || p.kode)}
@@ -4454,7 +4350,7 @@ window.processStartScan = async function(inputVal) {
                 ${escapeHtml(p.nama)}
             </h3>
             <p class="text-xs text-slate-600 font-bold mt-1">
-                ${escapeHtml((p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim())} • <span class="font-mono text-emerald-700">${escapeHtml(timeFormatted)} WIB</span>
+                ${escapeHtml((p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim())} â€¢ <span class="font-mono text-emerald-700">${escapeHtml(timeFormatted)} WIB</span>
             </p>
         `;
     }
