@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Alpha Chase Run (ACR 2026) - Application Logic
  * Terintegrasi dengan Firebase Cloud Firestore untuk Sinkronisasi Real-Time
  */
@@ -1977,18 +1977,17 @@ window.printLogistik = function() {
         document.body.removeChild(tempDiv);
     } catch(e) { rawQrCanvas = null; }
 
-    // Buat data URL QR dengan kompresi vertikal sesuai faktor regangan printer
-    function makeCompressedQrUrl(factor) {
-        var W = 300;
-        var H = Math.max(1, Math.round(W / factor));
+    // Buat data URL QR sebagai kotak sempurna (square)
+    function makeQrUrl() {
+        var SZ = 300;
         var out = document.createElement('canvas');
-        out.width = W; out.height = H;
+        out.width = SZ; out.height = SZ;
         var ctx = out.getContext('2d');
         ctx.imageSmoothingEnabled = false;
         if (rawQrCanvas) {
-            ctx.drawImage(rawQrCanvas, 0, 0, W, H);
+            ctx.drawImage(rawQrCanvas, 0, 0, SZ, SZ);
         } else {
-            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, SZ, SZ);
         }
         return out.toDataURL('image/png');
     }
@@ -1996,35 +1995,29 @@ window.printLogistik = function() {
     var printWin = window.open('', '_blank', 'width=520,height=780');
     if (!printWin) { alert('Popup diblokir. Izinkan popup untuk mencetak.'); return; }
 
-    var initialFactor = 3.0;
-    var initialQrUrl  = makeCompressedQrUrl(initialFactor);
+    var qrUrl = makeQrUrl();
 
     printWin.document.open();
     printWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Struk - ' + logCode + '</title><style>'
-+ '@page{size:58mm auto;margin:1mm 0 0 0;}'
++ '@page{size:58mm auto;margin:0;}'
 + '*{box-sizing:border-box;margin:0;padding:0;}'
 + '@media print{'
 + '.no-print{display:none!important;}'
-+ 'html,body{width:54mm!important;margin:0 auto!important;padding:0!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-+ '.ticket{width:54mm!important;padding:2mm 1mm!important;box-shadow:none!important;}'
-+ '#qrImg{display:block!important;margin:0 auto!important;image-rendering:pixelated!important;object-fit:fill!important;}'
++ 'html,body{width:56mm!important;margin:0 1mm!important;padding:0!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
++ '.ticket{width:56mm!important;padding:2mm 1.5mm!important;box-shadow:none!important;}'
++ '#qrImg{display:block!important;width:30mm!important;height:30mm!important;margin:0 auto!important;image-rendering:pixelated!important;}'
 + '}'
 + 'body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#dde3ec;padding:10px;}'
 + '.panel{max-width:360px;margin:0 auto 12px;background:#fff;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.18);padding:14px 18px;font-size:12px;color:#1e293b;}'
 + '.panel h3{font-size:15px;margin-bottom:4px;}'
 + '.sub{color:#64748b;font-size:11px;margin-bottom:12px;}'
-+ '.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}'
-+ '.slider-row label{font-weight:bold;white-space:nowrap;font-size:11px;}'
-+ '.slider-row input[type=range]{flex:1;accent-color:#2563eb;}'
-+ '.factor-badge{background:#2563eb;color:#fff;border-radius:6px;padding:2px 8px;font-weight:bold;font-size:13px;min-width:48px;text-align:center;}'
-+ '.hint{background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:8px 10px;font-size:10.5px;color:#92400e;margin-bottom:12px;line-height:1.5;}'
 + '.btn-print{display:block;width:100%;background:#16a34a;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;}'
-+ '.ticket{width:54mm;margin:0 auto;background:#fff;padding:3mm 2mm;box-shadow:0 2px 8px rgba(0,0,0,.15);text-align:center;}'
++ '.ticket{width:56mm;margin:0 auto;background:#fff;padding:3mm 2mm;box-shadow:0 2px 8px rgba(0,0,0,.15);text-align:center;}'
 + '.header{border-bottom:1px dashed #000;padding-bottom:3px;margin-bottom:5px;}'
 + '.event-title{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;}'
 + '.doc-title{font-size:7px;font-weight:bold;text-transform:uppercase;color:#333;margin-top:1px;}'
 + '.qr-section{margin:4px 0 3px;text-align:center;}'
-+ '#qrImg{display:block;margin:0 auto;image-rendering:pixelated;object-fit:fill;}'
++ '#qrImg{display:block;width:30mm;height:30mm;margin:0 auto;image-rendering:pixelated;}'
 + '.log-code-label{font-size:7px;font-weight:bold;color:#444;text-transform:uppercase;letter-spacing:1px;margin-top:3px;}'
 + '.log-code{font-size:15px;font-weight:900;letter-spacing:2px;font-family:monospace;margin-top:1px;}'
 + '.info-section{border-top:1px dashed #000;border-bottom:1px dashed #000;padding:4px 0;margin:5px 0;text-align:left;font-size:8px;}'
@@ -2038,18 +2031,12 @@ window.printLogistik = function() {
 + '</style></head><body>'
 + '<div class="no-print panel">'
 + '<h3>Struk Logistik &mdash; ' + logCode + '</h3>'
-+ '<div class="sub">Geser slider jika QR masih <b>melar ke bawah</b> atau <b>gepeng</b> saat dicetak</div>'
-+ '<div class="hint">&#9881;&#65039; Cara pakai: geser ke <b>kanan</b> jika QR terlalu panjang, ke <b>kiri</b> jika terlalu gepeng. Targetkan agar QR kotak sempurna saat dicetak, lalu simpan nilainya.</div>'
-+ '<div class="slider-row">'
-+ '<label>Kompresi QR:</label>'
-+ '<input type="range" id="sliderFactor" min="1" max="6" step="0.1" value="' + initialFactor + '" oninput="onFactorChange(this.value)">'
-+ '<span class="factor-badge" id="factorLabel">' + initialFactor.toFixed(1) + 'x</span>'
-+ '</div>'
++ '<div class="sub">QR Code sudah diatur kotak sempurna. Klik Cetak untuk mencetak struk.</div>'
 + '<button class="btn-print" onclick="window.print()">&#128424;&#65039; Cetak Sekarang</button>'
 + '</div>'
 + '<div class="ticket">'
 + '<div class="header"><div class="event-title">ALPHA CHASE RUN 2026</div><div class="doc-title">STRUK PENGAMBILAN LOGISTIK</div></div>'
-+ '<div class="qr-section"><img id="qrImg" src="' + initialQrUrl + '" width="150" height="50" alt="QR ' + logCode + '"></div>'
++ '<div class="qr-section"><img id="qrImg" src="' + qrUrl + '" alt="QR ' + logCode + '"></div>'
 + '<div class="log-code-label">KODE LOGISTIK</div>'
 + '<div class="log-code">' + logCode + '</div>'
 + '<div class="info-section">'
@@ -2059,31 +2046,13 @@ window.printLogistik = function() {
 + '</div>'
 + '<div class="footer"><p>Serahkan struk ini ke bagian pengambilan logistik.</p></div>'
 + '</div>'
-+ '<script>'
-+ 'var _qrCache={};'
-+ 'window.__setQrCache=function(c){_qrCache=c;};'
-+ 'function onFactorChange(v){'
-+ 'v=parseFloat(v);document.getElementById("factorLabel").textContent=v.toFixed(1)+"x";'
-+ 'var k=v.toFixed(1);if(_qrCache[k]){document.getElementById("qrImg").src=_qrCache[k];}'
-+ '}'
-+ '<\/script>'
 + '</body></html>');
     printWin.document.close();
 
-    // Pre-generate semua nilai slider (1.0 - 6.0)
+    // Cleanup canvas sementara
     setTimeout(function() {
-        try {
-            var factorMap = {};
-            for (var f = 10; f <= 60; f++) {
-                var factor = f / 10;
-                factorMap[factor.toFixed(1)] = makeCompressedQrUrl(factor);
-            }
-            if (printWin && !printWin.closed && printWin.__setQrCache) {
-                printWin.__setQrCache(factorMap);
-            }
-        } catch(e2) { /* ignore */ }
         if (rawQrCanvas && rawQrCanvas.parentNode) rawQrCanvas.parentNode.removeChild(rawQrCanvas);
-    }, 800);
+    }, 500);
 };
 
 window.findPesertaForLogistik = function(inputVal) {
