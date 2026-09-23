@@ -1930,26 +1930,70 @@ window.renderCheckinHistory = function() {
 
     const rows = [];
     list.forEach(p => {
+        const pId = p.id || '';
         rows.push(`
-            <div class="flex justify-between items-center p-3 border border-slate-100 rounded-xl bg-slate-50 hover:bg-slate-100 transition">
-                <div class="flex-1 min-w-0 pr-2">
-                    <p class="font-bold text-slate-800 text-sm truncate">${p.nama} <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded ml-1 border border-emerald-200">Hadir</span></p>
-                    <p class="text-xs text-slate-500 truncate">${p.kategori} | BIB: <span class="font-bold text-blue-600">${p.bibNumber || '-'}</span></p>
+            <div onclick="window.printLogistikForId('${pId}')" 
+                 class="flex justify-between items-center p-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-blue-50/70 hover:border-blue-300 transition cursor-pointer group shadow-sm"
+                 title="Klik nama peserta untuk mencetak QR Code Logistik">
+                <div class="flex-1 min-w-0 pr-3">
+                    <p class="font-bold text-slate-800 text-sm truncate group-hover:text-blue-700 transition">
+                        ${p.nama} 
+                        <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded ml-1 border border-emerald-200">Hadir</span>
+                    </p>
+                    <p class="text-xs text-slate-500 truncate mt-0.5">${p.kategori} | BIB: <span class="font-bold text-blue-600">${p.bibNumber || '-'}</span></p>
                 </div>
-                <div class="text-right flex-col items-end flex-shrink-0">
-                    <span class="text-[10px] text-slate-500">KODE LOGISTIK</span>
-                    <span class="text-sm font-black text-blue-700 tracking-widest">${p.kodeLogistik || '-'}</span>
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <div class="text-right flex-col items-end">
+                        <span class="text-[10px] text-slate-500 block">KODE LOGISTIK</span>
+                        <span class="text-sm font-black text-blue-700 tracking-widest">${p.kodeLogistik || '-'}</span>
+                    </div>
+                    <button type="button" onclick="event.stopPropagation(); window.printLogistikForId('${pId}')" 
+                            class="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 rounded-lg text-xs font-bold transition shadow-sm"
+                            title="Cetak QR Code Logistik">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        <span class="hidden sm:inline">Cetak</span>
+                    </button>
                 </div>
             </div>`);
     });
     container.innerHTML = rows.join('');
 };
 
-window.printLogistik = function() {
-    const logCode = document.getElementById('logistikCodeDisplay').textContent;
-    const nama    = document.getElementById('ciResNama').textContent;
-    const kat     = document.getElementById('ciResKat').textContent;
-    const bib     = document.getElementById('ciResBib').textContent;
+window.printLogistikForId = function(pesertaId) {
+    if (!pesertaId) return;
+    const p = State.currentMasterList.find(x => String(x.id) === String(pesertaId));
+    if (!p) {
+        alert('Data peserta tidak ditemukan.');
+        return;
+    }
+    // Sinkronkan data ke elemen modal check-in bila ada
+    try {
+        const logCodeEl = document.getElementById('logistikCodeDisplay');
+        const namaEl = document.getElementById('ciResNama');
+        const katEl = document.getElementById('ciResKat');
+        const bibEl = document.getElementById('ciResBib');
+        if (logCodeEl) logCodeEl.textContent = p.kodeLogistik || '-';
+        if (namaEl) namaEl.textContent = p.nama || '-';
+        if (katEl) katEl.textContent = p.kategori || '-';
+        if (bibEl) bibEl.textContent = p.bibNumber || '-';
+    } catch(e) {}
+
+    window.printLogistik(p);
+};
+
+window.printLogistik = function(pOverride) {
+    let logCode, nama, kat, bib;
+    if (pOverride) {
+        logCode = pOverride.kodeLogistik || '-';
+        nama    = pOverride.nama || '-';
+        kat     = pOverride.kategori || '-';
+        bib     = pOverride.bibNumber || pOverride.bib || '-';
+    } else {
+        logCode = document.getElementById('logistikCodeDisplay') ? document.getElementById('logistikCodeDisplay').textContent : '-';
+        nama    = document.getElementById('ciResNama') ? document.getElementById('ciResNama').textContent : '-';
+        kat     = document.getElementById('ciResKat') ? document.getElementById('ciResKat').textContent : '-';
+        bib     = document.getElementById('ciResBib') ? document.getElementById('ciResBib').textContent : '-';
+    }
 
     // Generate QR sebagai canvas murni 300x300 px dari library lokal
     let rawQrCanvas = null;
