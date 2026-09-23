@@ -1930,9 +1930,11 @@ window.renderCheckinHistory = function() {
 
     const rows = [];
     list.forEach(p => {
-        const pId = p.id || '';
+        // Gunakan identifier unik peserta: kode pendaftaran (cth: RUN-XXXXXX) atau bibNumber atau kodeLogistik
+        const pKey = p.kode || p.bibNumber || p.kodeLogistik || '';
+        const safeKey = String(pKey).replace(/'/g, "\\'");
         rows.push(`
-            <div onclick="window.printLogistikForId('${pId}')" 
+            <div onclick="window.printLogistikByKode('${safeKey}')" 
                  class="flex justify-between items-center p-3 border border-slate-200 rounded-xl bg-slate-50 hover:bg-blue-50/70 hover:border-blue-300 transition cursor-pointer group shadow-sm"
                  title="Klik nama peserta untuk mencetak QR Code Logistik">
                 <div class="flex-1 min-w-0 pr-3">
@@ -1947,11 +1949,11 @@ window.renderCheckinHistory = function() {
                         <span class="text-[10px] text-slate-500 block">KODE LOGISTIK</span>
                         <span class="text-sm font-black text-blue-700 tracking-widest">${p.kodeLogistik || '-'}</span>
                     </div>
-                    <button type="button" onclick="event.stopPropagation(); window.printLogistikForId('${pId}')" 
-                            class="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 rounded-lg text-xs font-bold transition shadow-sm"
+                    <button type="button" onclick="event.stopPropagation(); window.printLogistikByKode('${safeKey}')" 
+                            class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 rounded-lg text-xs font-bold transition shadow-sm"
                             title="Cetak QR Code Logistik">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                        <span class="hidden sm:inline">Cetak</span>
+                        <span>Cetak</span>
                     </button>
                 </div>
             </div>`);
@@ -1959,9 +1961,17 @@ window.renderCheckinHistory = function() {
     container.innerHTML = rows.join('');
 };
 
-window.printLogistikForId = function(pesertaId) {
-    if (!pesertaId) return;
-    const p = State.currentMasterList.find(x => String(x.id) === String(pesertaId));
+window.printLogistikByKode = function(keyVal) {
+    if (!keyVal) {
+        alert('Data peserta tidak valid.');
+        return;
+    }
+    const q = String(keyVal).trim().toUpperCase();
+    const p = State.currentMasterList.find(x => 
+        (x.kode && String(x.kode).toUpperCase() === q) || 
+        (x.bibNumber && String(x.bibNumber).toUpperCase() === q) ||
+        (x.kodeLogistik && String(x.kodeLogistik).toUpperCase() === q)
+    );
     if (!p) {
         alert('Data peserta tidak ditemukan.');
         return;
@@ -1980,6 +1990,8 @@ window.printLogistikForId = function(pesertaId) {
 
     window.printLogistik(p);
 };
+
+window.printLogistikForId = window.printLogistikByKode;
 
 window.printLogistik = function(pOverride) {
     let logCode, nama, kat, bib;
