@@ -981,9 +981,47 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-3 border-slate-100">Riwayat Pengambilan Logistik</h3>
-                <div class="space-y-2 max-h-[350px] overflow-y-auto pr-2 no-scrollbar" id="logistikHistoryList">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 sm:p-6">
+                <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 pb-3 border-b border-slate-100 gap-3">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-lg font-bold text-slate-800">Riwayat Pengambilan Logistik</h3>
+                        <span id="logistikStatsBadge" class="text-xs bg-blue-50 text-blue-700 font-bold px-2.5 py-0.5 rounded-full border border-blue-200"></span>
+                    </div>
+
+                    <!-- Filter Bar & Pencarian -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Filter Tabs: Semua, Sudah Ambil / Diambil, Belum Ambil -->
+                        <div class="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200/80 text-xs font-bold" id="logistikFilterTabs">
+                            <button type="button" onclick="setLogistikStatusFilter('all')" id="btnLogFilter_all" class="px-3 py-1.5 rounded-lg transition shadow-sm bg-white text-blue-700 cursor-pointer">
+                                Semua (<span id="countLogAll">0</span>)
+                            </button>
+                            <button type="button" onclick="setLogistikStatusFilter('sudah')" id="btnLogFilter_sudah" class="px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-emerald-700 cursor-pointer">
+                                Sudah Ambil / Diambil (<span id="countLogSudah">0</span>)
+                            </button>
+                            <button type="button" onclick="setLogistikStatusFilter('belum')" id="btnLogFilter_belum" class="px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-amber-700 cursor-pointer">
+                                Belum Ambil (<span id="countLogBelum">0</span>)
+                            </button>
+                        </div>
+
+                        <!-- Filter Item Logistik Spesifik -->
+                        <div class="relative">
+                            <select id="filterLogistikItem" onchange="renderLogistikHistory()" class="px-3 py-1.5 border rounded-xl text-xs font-semibold outline-none focus:border-blue-500 bg-slate-50 text-slate-700 cursor-pointer shadow-sm">
+                                <option value="">Semua Item</option>
+                                <option value="lengkap">Lengkap (Jersey, BIB, Tas)</option>
+                                <option value="Jersey">Jersey</option>
+                                <option value="Nomor BIB">Nomor BIB</option>
+                                <option value="Tas Serut">Tas Serut</option>
+                            </select>
+                        </div>
+
+                        <!-- Input Cari Peserta Logistik -->
+                        <div class="relative w-full sm:w-44">
+                            <input type="text" id="searchLogistikInput" onkeyup="renderLogistikHistory()" placeholder="Cari nama / BIB..." class="w-full px-3 py-1.5 border rounded-xl text-xs outline-none focus:border-blue-500 bg-slate-50 shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2 max-h-[420px] overflow-y-auto pr-2 no-scrollbar" id="logistikHistoryList">
                     <div class="text-center py-6 text-slate-400 text-sm">Memuat riwayat logistik...</div>
                 </div>
             </div>
