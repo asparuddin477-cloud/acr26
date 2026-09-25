@@ -2750,17 +2750,11 @@ window.renderLogistikHistory = function() {
                         </div>
                         <span class="text-[10px] ${p.kodeLogistik ? 'bg-blue-100 text-blue-700 font-bold' : 'bg-slate-100 text-slate-400'} px-2 py-1 rounded tracking-wider flex-shrink-0">${escapeHtml(p.kodeLogistik || '-')}</span>
                     </div>
-                    <p class="text-xs text-amber-700 font-medium mb-2 flex items-center gap-1">
+                    <p class="text-xs text-amber-700 font-medium flex items-center gap-1">
                         <svg class="w-3.5 h-3.5 inline-block text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <span><strong>Status:</strong> Belum Diambil</span>
                         <span class="text-slate-400 ml-1">&bull; Jersey: ${escapeHtml(p.jersey || '-')}</span>
                     </p>
-                    <div class="flex space-x-2 mt-auto justify-end border-t border-amber-100 pt-2">
-                        <button onclick="openLogistikModalForPesertaByKode('${safeKode}')" class="px-3.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[10px] font-bold rounded-lg transition shadow-sm flex items-center gap-1 cursor-pointer">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            <span>Serahkan Logistik</span>
-                        </button>
-                    </div>
                 </div>`;
         }
     });
