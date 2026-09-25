@@ -1944,21 +1944,74 @@ window.renderCheckinHistory = function() {
                     </p>
                     <p class="text-xs text-slate-500 truncate mt-0.5">${p.kategori} | BIB: <span class="font-bold text-blue-600">${p.bibNumber || '-'}</span></p>
                 </div>
-                <div class="flex items-center gap-3 flex-shrink-0">
-                    <div class="text-right flex-col items-end">
-                        <span class="text-[10px] text-slate-500 block">KODE LOGISTIK</span>
-                        <span class="text-sm font-black text-blue-700 tracking-widest">${p.kodeLogistik || '-'}</span>
+                <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <div class="text-right flex flex-col items-end">
+                        <span class="text-[9px] sm:text-[10px] text-slate-500 block">KODE LOGISTIK</span>
+                        <span class="text-xs sm:text-sm font-black text-blue-700 tracking-wider">${p.kodeLogistik || '-'}</span>
                     </div>
-                    <button type="button" onclick="event.stopPropagation(); window.printLogistikByKode('${safeKey}')" 
-                            class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 rounded-lg text-xs font-bold transition shadow-sm"
-                            title="Cetak QR Code Logistik">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                        <span>Cetak</span>
-                    </button>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="event.stopPropagation(); window.printLogistikByKode('${safeKey}')" 
+                                class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                                title="Cetak QR Code Logistik">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            <span>Cetak</span>
+                        </button>
+                        <button type="button" onclick="event.stopPropagation(); window.deleteCheckinHistory('${safeKey}')" 
+                                class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200 hover:border-red-600 active:scale-95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                                title="Hapus / Batalkan Check-In">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            <span>Hapus</span>
+                        </button>
+                    </div>
                 </div>
             </div>`);
     });
     container.innerHTML = rows.join('');
+};
+
+window.deleteCheckinHistory = async function(keyVal) {
+    if (!keyVal) {
+        await window.customAlert('Data peserta tidak valid.', 'error');
+        return;
+    }
+    const q = String(keyVal).trim().toUpperCase();
+    const p = State.currentMasterList.find(x => 
+        (x.kode && String(x.kode).toUpperCase() === q) || 
+        (x.bibNumber && String(x.bibNumber).toUpperCase() === q) ||
+        (x.kodeLogistik && String(x.kodeLogistik).toUpperCase() === q)
+    );
+    if (!p) {
+        await window.customAlert('Data peserta tidak ditemukan.', 'error');
+        return;
+    }
+
+    const isConfirmed = await window.customConfirm(
+        `Apakah Anda yakin ingin membatalkan check-in untuk peserta <strong>${escapeHtml(p.nama)}</strong> (${escapeHtml(p.bibNumber || p.kode)})?<br><br>` +
+        `Data kehadiran dan Kode Logistik (<strong>${escapeHtml(p.kodeLogistik || '-')}</strong>) akan di-reset sehingga peserta dapat di-check-in ulang.`,
+        "Hapus / Batalkan Check-In"
+    );
+    if (!isConfirmed) return;
+
+    // Reset status check-in dan kode logistik peserta
+    p.checkedIn = false;
+    p.kodeLogistik = "";
+    p.logistikDiambil = "";
+    if (p.statusCheckin) p.statusCheckin = "";
+    if (p.hadir !== undefined) p.hadir = false;
+
+    await updatePeserta(p.kode, {
+        checkedIn: false,
+        kodeLogistik: "",
+        logistikDiambil: "",
+        statusCheckin: ""
+    });
+
+    window.renderCheckinHistory();
+    if (typeof refreshActivePageUI === 'function') refreshActivePageUI();
+    await window.customAlert(`Check-in peserta <strong>${escapeHtml(p.nama)}</strong> berhasil dibatalkan/dihapus.`, "success");
+    if (typeof window.refocusActiveScannerInput === 'function') {
+        window.refocusActiveScannerInput();
+    }
 };
 
 window.printLogistikByKode = function(keyVal) {
