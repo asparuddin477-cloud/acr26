@@ -860,24 +860,40 @@
         <!-- ==================== PAGE: MASTER DATA (ADMIN) ==================== -->
         <section id="page-master" class="page-section">
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-4 sm:p-6">
-                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
-                    <h2 class="text-lg font-bold text-slate-800">Master Data</h2>
-                    <div class="flex space-x-2 w-full sm:w-auto">
-                        <div class="relative flex-1 sm:w-64">
+                <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 gap-3">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-lg font-bold text-slate-800">Master Data</h2>
+                        <span id="masterTotalBadge" class="text-xs bg-slate-100 text-slate-600 font-bold px-2.5 py-0.5 rounded-full border border-slate-200"></span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                        <!-- Filter Kategori Lari -->
+                        <div class="relative flex-1 sm:flex-initial sm:w-48">
+                            <select id="filterKategoriMaster" onchange="renderMasterTable()" class="w-full px-3 py-2 border rounded-lg text-xs font-semibold outline-none focus:border-blue-500 bg-slate-50 text-slate-700 cursor-pointer shadow-sm">
+                                <option value="">Semua Kategori</option>
+                            </select>
+                        </div>
+                        <!-- Input Cari Peserta -->
+                        <div class="relative flex-1 sm:w-56 min-w-[150px]">
                             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                             </div>
-                            <input type="text" id="searchMasterInput" onkeyup="renderMasterTable()" placeholder="Cari Nama/BIB/Kode..." class="w-full pl-9 px-3 py-2 border rounded-lg text-xs outline-none focus:border-blue-500 bg-slate-50">
+                            <input type="text" id="searchMasterInput" onkeyup="renderMasterTable()" placeholder="Cari Nama/BIB/Kode..." class="w-full pl-9 px-3 py-2 border rounded-lg text-xs outline-none focus:border-blue-500 bg-slate-50 shadow-sm">
                         </div>
-                        <button onclick="exportToExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-bold active:scale-95 transition flex items-center flex-shrink-0 shadow-sm">
-                            <svg class="w-4 h-4 mr-1 sm:mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            <span>Download Excel</span>
-                        </button>
-                        <button onclick="exportToPDF()" class="text-xs bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-bold active:scale-95 transition flex items-center flex-shrink-0"><svg class="w-4 h-4 mr-1 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> PDF Rekap</button>
-                        <button onclick="openBatchBibModal()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold active:scale-95 transition flex items-center flex-shrink-0 shadow-sm">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                            <span>Cetak Batch BIB (PDF)</span>
-                        </button>
+                        <!-- Tombol Aksi Export & Batch -->
+                        <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                            <button onclick="exportToExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-bold active:scale-95 transition flex items-center flex-shrink-0 shadow-sm cursor-pointer">
+                                <svg class="w-4 h-4 mr-1 sm:mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                <span>Download Excel</span>
+                            </button>
+                            <button onclick="exportToPDF()" class="text-xs bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-bold active:scale-95 transition flex items-center flex-shrink-0 shadow-sm cursor-pointer">
+                                <svg class="w-4 h-4 mr-1 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                <span>PDF Rekap</span>
+                            </button>
+                            <button onclick="openBatchBibModal()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold active:scale-95 transition flex items-center flex-shrink-0 shadow-sm cursor-pointer">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                                <span>Cetak Batch BIB (PDF)</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="mobile-table-container">

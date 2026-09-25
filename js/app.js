@@ -1369,17 +1369,78 @@ window.renderAdminHistory = function() {
     hList.innerHTML = rows.join('');
 };
 
+window.populateMasterCategoryFilter = function() {
+    const sel = document.getElementById('filterKategoriMaster');
+    if (!sel) return;
+    const currentVal = sel.value;
+
+    const catCounts = {};
+    let totalCount = 0;
+
+    (State.currentMasterList || []).forEach(p => {
+        totalCount++;
+        let raw = p.kategori ? String(p.kategori).trim() : 'Lainnya';
+        let clean = raw.replace(/\s*\([^)]*\)/g, '').trim() || 'Lainnya';
+        catCounts[clean] = (catCounts[clean] || 0) + 1;
+    });
+
+    if (State.settings && State.settings.kategori) {
+        State.settings.kategori.split('\n').forEach(line => {
+            let clean = line.replace(/\s*\([^)]*\)/g, '').trim();
+            if (clean && catCounts[clean] === undefined) {
+                catCounts[clean] = 0;
+            }
+        });
+    }
+
+    const sortedCats = Object.keys(catCounts).sort();
+    const currentKey = JSON.stringify({ total: totalCount, cats: catCounts });
+    if (sel.getAttribute('data-cache-key') !== currentKey) {
+        let html = `<option value="">Semua Kategori (${totalCount})</option>`;
+        sortedCats.forEach(cat => {
+            const count = catCounts[cat];
+            const selected = (currentVal === cat) ? ' selected' : '';
+            html += `<option value="${escapeHtml(cat)}"${selected}>${escapeHtml(cat)} (${count})</option>`;
+        });
+        sel.innerHTML = html;
+        sel.setAttribute('data-cache-key', currentKey);
+        if (currentVal && catCounts[currentVal] !== undefined) {
+            sel.value = currentVal;
+        }
+    }
+};
+
 window.renderMasterTable = function() {
     const tbody = document.getElementById('masterTableBody');
     if (!tbody) return;
+
+    if (typeof window.populateMasterCategoryFilter === 'function') {
+        window.populateMasterCategoryFilter();
+    }
+
     const keyword = document.getElementById('searchMasterInput') ? document.getElementById('searchMasterInput').value.toLowerCase().trim() : '';
+    const selectedCat = document.getElementById('filterKategoriMaster') ? document.getElementById('filterKategoriMaster').value.toLowerCase().trim() : '';
     
     const filteredList = State.currentMasterList.filter(p => {
-        if (keyword === '') return true;
-        return (p.nama && p.nama.toLowerCase().includes(keyword)) || 
-               (p.bibNumber && p.bibNumber.toLowerCase().includes(keyword)) ||
-               (p.kode && p.kode.toLowerCase().includes(keyword));
+        if (selectedCat !== '') {
+            const pKatClean = String(p.kategori || '').replace(/\s*\([^)]*\)/g, '').toLowerCase().trim();
+            const pKatRaw = String(p.kategori || '').toLowerCase().trim();
+            if (pKatClean !== selectedCat && !pKatRaw.includes(selectedCat)) {
+                return false;
+            }
+        }
+        if (keyword !== '') {
+            return (p.nama && p.nama.toLowerCase().includes(keyword)) || 
+                   (p.bibNumber && p.bibNumber.toLowerCase().includes(keyword)) ||
+                   (p.kode && p.kode.toLowerCase().includes(keyword));
+        }
+        return true;
     });
+
+    const badgeEl = document.getElementById('masterTotalBadge');
+    if (badgeEl) {
+        badgeEl.textContent = `${filteredList.length} Peserta`;
+    }
 
     if(filteredList.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400 text-xs">Data tidak ditemukan.</td></tr>';
@@ -1613,9 +1674,29 @@ window.saveEditPeserta = async function(event) {
 };
 
 window.exportToExcel = function() {
-    const list = State.currentMasterList;
+    const filterCat = document.getElementById('filterKategoriMaster') ? document.getElementById('filterKategoriMaster').value.toLowerCase().trim() : '';
+    const keyword = document.getElementById('searchMasterInput') ? document.getElementById('searchMasterInput').value.toLowerCase().trim() : '';
+
+    let list = State.currentMasterList;
+    if (filterCat !== '' || keyword !== '') {
+        list = list.filter(p => {
+            if (filterCat !== '') {
+                const pKatClean = String(p.kategori || '').replace(/\s*\([^)]*\)/g, '').toLowerCase().trim();
+                const pKatRaw = String(p.kategori || '').toLowerCase().trim();
+                if (pKatClean !== filterCat && !pKatRaw.includes(filterCat)) return false;
+            }
+            if (keyword !== '') {
+                const match = (p.nama && p.nama.toLowerCase().includes(keyword)) || 
+                              (p.bibNumber && p.bibNumber.toLowerCase().includes(keyword)) ||
+                              (p.kode && p.kode.toLowerCase().includes(keyword));
+                if (!match) return false;
+            }
+            return true;
+        });
+    }
+
     if (!list || list.length === 0) {
-        window.customAlert("Belum ada data peserta untuk diunduh.", "warning", "Data Kosong");
+        window.customAlert("Belum ada data peserta yang cocok untuk diunduh.", "warning", "Data Kosong");
         return;
     }
 
@@ -1789,11 +1870,20 @@ window.exportToPDF = async function() {
         doc.line(40, 75, doc.internal.pageSize.width - 40, 75);
 
         const keyword = document.getElementById('searchMasterInput') ? document.getElementById('searchMasterInput').value.toLowerCase().trim() : '';
+        const filterCat = document.getElementById('filterKategoriMaster') ? document.getElementById('filterKategoriMaster').value.toLowerCase().trim() : '';
+
         const filteredList = State.currentMasterList.filter(p => {
-            if (keyword === '') return true;
-            return (p.nama && p.nama.toLowerCase().includes(keyword)) || 
-                   (p.bibNumber && p.bibNumber.toLowerCase().includes(keyword)) ||
-                   (p.kode && p.kode.toLowerCase().includes(keyword));
+            if (filterCat !== '') {
+                const pKatClean = String(p.kategori || '').replace(/\s*\([^)]*\)/g, '').toLowerCase().trim();
+                const pKatRaw = String(p.kategori || '').toLowerCase().trim();
+                if (pKatClean !== filterCat && !pKatRaw.includes(filterCat)) return false;
+            }
+            if (keyword !== '') {
+                return (p.nama && p.nama.toLowerCase().includes(keyword)) || 
+                       (p.bibNumber && p.bibNumber.toLowerCase().includes(keyword)) ||
+                       (p.kode && p.kode.toLowerCase().includes(keyword));
+            }
+            return true;
         });
 
         const tableData = filteredList.map((p, i) => [
