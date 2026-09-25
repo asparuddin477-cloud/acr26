@@ -1405,7 +1405,7 @@ window.renderMasterTable = function() {
         btnHTML += `<button onclick="deletePeserta('${p.kode}')" class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-bold shadow-sm hover:bg-red-600 active:scale-95">Hapus</button></div>`;
         
         let isCheckedIn = window.isPesertaCheckedIn(p);
-        let checkInIndicator = isCheckedIn ? '<br><span class="text-[9px] text-emerald-600">âœ… Hadir</span>' : '';
+        let checkInIndicator = isCheckedIn ? '<br><span class="text-[9px] text-emerald-600">✅ Hadir</span>' : '';
         
         let idHTML = p.bibNumber 
             ? `<span class="font-bold text-blue-600 text-sm">${p.bibNumber}</span>${checkInIndicator}` 
@@ -1419,7 +1419,7 @@ window.renderMasterTable = function() {
                 <td class="py-3 px-3 align-top"><span class="font-bold text-slate-700 text-xs uppercase">${p.bibName || '-'}</span></td>
                 <td class="py-3 px-3 align-top">
                     <div class="font-bold text-slate-800 text-sm truncate max-w-[120px] sm:max-w-[200px]">${p.nama}</div>
-                    <div class="text-[10px] text-slate-500">${p.kategori} <span class="text-indigo-600 font-bold ml-1">â€¢ ${p.jersey || '-'}</span></div>
+                    <div class="text-[10px] text-slate-500">${p.kategori} &bull; <span class="text-indigo-600 font-bold">${p.jersey || '-'}</span></div>
                 </td>
                 <td class="py-3 px-3 align-top">
                     <span class="text-[10px] border px-2 py-1 rounded inline-block ${statusClass} leading-none text-center">${p.status}</span>
@@ -1514,7 +1514,7 @@ window.openEditPesertaModal = function(kode) {
     if (!p) return;
 
     document.getElementById('editKode').value = p.kode;
-    document.getElementById('editModalSubtitle').textContent = `Kode: ${p.kode} â€¢ BIB: ${p.bibNumber || '-'}`;
+    document.getElementById('editModalSubtitle').textContent = `Kode: ${p.kode} • BIB: ${p.bibNumber || '-'}`;
     document.getElementById('editNama').value = p.nama || '';
     
     // Set Ukuran Jersey
@@ -2325,7 +2325,7 @@ window.toggleLogistikScanner = async function() {
     if (window.releaseAllCameraTracks) window.releaseAllCameraTracks();
 
     wrapper.classList.remove('hidden');
-    if (txtBtn) txtBtn.textContent = 'â¹ï¸ Hentikan Kamera';
+    if (txtBtn) txtBtn.textContent = '⏹️ Hentikan Kamera';
     isLogistikScannerActive = true;
 
     try {
@@ -2515,7 +2515,7 @@ window.renderLogistikData = function() {
                         <span class="bg-blue-100 group-hover:bg-blue-600 group-hover:text-white text-blue-800 py-1 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition shadow-sm">${jerseyCount[size]}</span>
                         <span class="text-xs text-blue-600 font-semibold group-hover:underline flex items-center gap-1">
                             <span class="hidden sm:inline">Lihat Peserta</span>
-                            <span>âž”</span>
+                            <svg class="w-3.5 h-3.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </span>
                     </div>
                 </div>`;
@@ -2536,7 +2536,7 @@ window.renderLogistikData = function() {
                     <span class="bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white text-emerald-800 py-1 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition shadow-sm">${katCount[kat]}</span>
                     <span class="text-xs text-emerald-600 font-semibold group-hover:underline flex items-center gap-1">
                         <span class="hidden sm:inline">Lihat Peserta</span>
-                        <span>âž”</span>
+                        <svg class="w-3.5 h-3.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                     </span>
                 </div>
             </div>`;
@@ -2708,7 +2708,7 @@ function renderCatModalRows(list) {
         const nama = String(p.nama || '-');
         const bibNumber = String(p.bibNumber || '-');
         const kode = String(p.kode || '');
-        const bibName = p.bibName ? `â€¢ ${p.bibName}` : '';
+        const bibName = p.bibName ? `• ${p.bibName}` : '';
         const kategori = String(p.kategori || '-');
         const jersey = String(p.jersey || '-');
 
@@ -3030,12 +3030,12 @@ window.handleBibSearchInput = function(query) {
                         </div>
                         <div class="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
                             <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
-                            <span class="text-slate-300">â€¢</span>
+                            <span class="text-slate-300">&bull;</span>
                             <span class="font-mono text-slate-400">Status: ${escapeHtml(p.status || '-')}</span>
                         </div>
                     </div>
                     <span class="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold flex items-center gap-1">
-                        <span>ðŸ”’ Terkunci</span>
+                        <span>🔒 Terkunci</span>
                     </span>
                 </div>
             `;
@@ -3048,19 +3048,19 @@ window.handleBibSearchInput = function(query) {
                         <div class="flex items-center gap-2">
                             <span class="font-bold text-slate-800 text-sm group-hover:text-amber-700 uppercase">${escapeHtml(p.nama)}</span>
                             <span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold border border-amber-200 flex items-center gap-1">
-                                <span>ðŸ”’ Belum Check-In</span>
+                                <span>🔒 Belum Check-In</span>
                             </span>
                         </div>
                         <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
                             <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
-                            <span class="text-slate-300">â€¢</span>
+                            <span class="text-slate-300">&bull;</span>
                             <span class="font-mono text-amber-700 font-bold">BIB: Terkunci (Ambil di Meja Check-In)</span>
-                            <span class="text-slate-300">â€¢</span>
+                            <span class="text-slate-300">&bull;</span>
                             <span class="font-mono text-slate-400">${escapeHtml(p.kode)}</span>
                         </div>
                     </div>
                     <button type="button" class="px-3 py-1.5 bg-amber-500 group-hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1">
-                        <span>ðŸ”’ Terkunci</span>
+                        <span>🔒 Terkunci</span>
                     </button>
                 </div>
             `;
@@ -3072,19 +3072,19 @@ window.handleBibSearchInput = function(query) {
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-slate-800 text-sm group-hover:text-indigo-600 uppercase">${escapeHtml(p.nama)}</span>
                         <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
-                            <span>âœ… Sudah Check-In</span>
+                            <span>✅ Sudah Check-In</span>
                         </span>
                     </div>
                     <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
                         <span>${escapeHtml((p.kategori || '-').replace(/\s*\([^)]*\)/g, '').trim())}</span>
-                        <span class="text-slate-300">â€¢</span>
+                        <span class="text-slate-300">&bull;</span>
                         <span class="font-mono text-blue-600 font-bold">BIB: ${escapeHtml(p.bibNumber || 'Sudah Ada')}</span>
-                        <span class="text-slate-300">â€¢</span>
+                        <span class="text-slate-300">&bull;</span>
                         <span class="font-mono text-slate-400">${escapeHtml(p.kode)}</span>
                     </div>
                 </div>
                 <button type="button" class="px-3 py-1.5 bg-indigo-600 group-hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1">
-                    <span>Pilih</span> ðŸ“¸
+                    <span>Pilih</span> 📸
                 </button>
             </div>
         `;
@@ -3208,7 +3208,7 @@ window.showBibScreen = async function(kode) {
     const statusBadge = document.getElementById('dispBibStatusBadge');
     if (statusBadge) {
         statusBadge.className = "px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200 flex items-center gap-1";
-        statusBadge.innerHTML = "<span>âœ… Verified & Checked-In</span>";
+        statusBadge.innerHTML = "<span>✅ Verified & Checked-In</span>";
     }
 
     const qrEl = document.getElementById('dispBibQrCode');
@@ -4383,7 +4383,7 @@ window.processStartScan = async function(inputVal) {
         if (box) {
             box.className = "p-6 rounded-2xl border-2 border-red-400 bg-red-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
             box.innerHTML = `
-                <span class="text-4xl mb-2">âŒ</span>
+                <span class="text-4xl mb-2">❌</span>
                 <h3 class="font-black text-red-700 text-lg">PESERTA TIDAK DITEMUKAN!</h3>
                 <p class="text-xs text-red-600 mt-1">Kode / BIB "<strong>${escapeHtml(inputVal)}</strong>" tidak ada di sistem.</p>
             `;
@@ -4397,7 +4397,7 @@ window.processStartScan = async function(inputVal) {
         if (box) {
             box.className = "p-6 rounded-2xl border-2 border-yellow-400 bg-yellow-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
             box.innerHTML = `
-                <span class="text-4xl mb-2">âš ï¸</span>
+                <span class="text-4xl mb-2">⚠️</span>
                 <h3 class="font-black text-yellow-800 text-lg">BELUM DIVERIFIKASI!</h3>
                 <p class="text-xs text-yellow-700 mt-1">Peserta <strong>${escapeHtml(p.nama)}</strong> (${escapeHtml(p.bibNumber || p.kode)}) berstatus <em>${escapeHtml(p.status)}</em>.</p>
             `;
@@ -4412,7 +4412,7 @@ window.processStartScan = async function(inputVal) {
         if (box) {
             box.className = "p-6 rounded-2xl border-2 border-amber-400 bg-amber-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300";
             box.innerHTML = `
-                <span class="text-4xl mb-2">â›”</span>
+                <span class="text-4xl mb-2">⛔</span>
                 <h3 class="font-black text-amber-900 text-lg">SUDAH MELAKUKAN START!</h3>
                 <p class="text-xs sm:text-sm text-amber-800 mt-1">
                     <strong>${escapeHtml(p.nama)}</strong> (${escapeHtml(p.bibNumber || p.kode)})<br>
@@ -4441,7 +4441,7 @@ window.processStartScan = async function(inputVal) {
         box.className = "p-6 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-center min-h-[220px] flex flex-col justify-center items-center transition-all duration-300 shadow-md";
         box.innerHTML = `
             <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 text-white rounded-full text-xs font-black mb-2 shadow">
-                <span>âœ“ BERHASIL START</span> â€¢ <span>${escapeHtml(gateUsed)}</span>
+                <span>✓ BERHASIL START</span> &bull; <span>${escapeHtml(gateUsed)}</span>
             </div>
             <div class="font-mono text-3xl sm:text-4xl font-black text-emerald-800 tracking-tight my-1">
                 ${escapeHtml(p.bibNumber || p.kode)}
@@ -4450,7 +4450,7 @@ window.processStartScan = async function(inputVal) {
                 ${escapeHtml(p.nama)}
             </h3>
             <p class="text-xs text-slate-600 font-bold mt-1">
-                ${escapeHtml((p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim())} â€¢ <span class="font-mono text-emerald-700">${escapeHtml(timeFormatted)} WIB</span>
+                ${escapeHtml((p.kategori || '').replace(/\s*\([^)]*\)/g, '').trim())} &bull; <span class="font-mono text-emerald-700">${escapeHtml(timeFormatted)} WIB</span>
             </p>
         `;
     }
